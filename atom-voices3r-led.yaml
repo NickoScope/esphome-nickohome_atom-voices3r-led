@@ -1,0 +1,426 @@
+# =============================================================================
+#  M5Stack Atom VoiceS3R (EchoS3R) -> ESPHome audio-reactive LED controller
+#  + Home Assistant media player + TV-presence simulator.
+#
+#  num_leds = PHYSICAL strip length (drive every LED). "Active LEDs" sets how many
+#  are lit. Every effect lights [0, active) and the unused tail [active, num_leds)
+#  is forced OFF every frame BY THE EFFECTS *and* by a global interval, so the tail
+#  stays black in EVERY state: effects, plain solid/monochrome color, and static.
+# =============================================================================
+
+substitutions:
+  name: atom-voice
+  friendly_name: "Atom Voice"
+  led_data_pin: GPIO2      # Grove port, yellow wire
+  num_leds: "100"          # PHYSICAL strip length
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - delay: 1s
+      - speaker.stop: i2s_speaker   # release idle speaker driver -> mic owns the shared bus
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+  level: DEBUG
+  logs:
+    wifi: WARN
+    wifi_esp32: WARN
+    esp-idf: WARN
+captive_portal:
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+api:
+  encryption:
+    key: !secret api_encryption_key
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# ---------- AUDIO HARDWARE (ES8311 codec) ----------
+i2c:
+  - id: i2c0
+    sda: GPIO45
+    scl: GPIO0
+    frequency: 400kHz
+
+i2s_audio:
+  - id: i2s_audio_bus
+    i2s_lrclk_pin: GPIO3
+    i2s_bclk_pin: GPIO17
+    i2s_mclk_pin: GPIO11
+
+audio_dac:
+  - platform: es8311
+    id: es8311_dac
+    bits_per_sample: 16bit
+    sample_rate: 48000
+
+microphone:
+  - platform: i2s_audio
+    id: i2s_mic
+    i2s_audio_id: i2s_audio_bus
+    i2s_din_pin: GPIO4
+    adc_type: external
+    channel: left            # ES8311 mono ADC outputs on the LEFT slot (default right = silence)
+    sample_rate: 48000
+    bits_per_sample: 16bit
+
+speaker:
+  - platform: i2s_audio
+    id: i2s_speaker
+    i2s_audio_id: i2s_audio_bus
+    dac_type: external
+    i2s_dout_pin: GPIO48
+    sample_rate: 48000
+    bits_per_sample: 16bit
+    channel: left
+  - platform: mixer
+    id: spk_mixer
+    output_speaker: i2s_speaker
+    source_speakers:
+      - id: announcement_spk
+      - id: media_spk
+
+media_player:
+  - platform: speaker
+    name: "Atom Speaker"
+    id: speaker_media_player
+    volume_min: 0.0
+    volume_max: 1.0
+    announcement_pipeline:
+      speaker: announcement_spk
+    media_pipeline:
+      speaker: media_spk
+    on_play:        # playback started -> give the bus to the speaker (mic off)
+      - sound_level.stop: sound_meter
+      - lambda: 'id(vu) = 0; id(vu_target) = 0;'
+    on_idle:        # playback finished -> hand the bus back to the mic
+      - delay: 1s
+      - speaker.stop: i2s_speaker
+      - sound_level.start: sound_meter
+    on_pause:
+      - delay: 500ms
+      - speaker.stop: i2s_speaker
+      - sound_level.start: sound_meter
+
+# ---------- AMPLIFIER ENABLE ----------
+switch:
+  - platform: gpio
+    pin: GPIO18
+    id: spk_enable
+    internal: true
+    restore_mode: ALWAYS_ON
+
+# ---------- HA CONTROLS ----------
+number:
+  - platform: template
+    name: "Mic Sensitivity"
+    id: mic_sensitivity
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 10
+    initial_value: 50
+    restore_value: true
+    unit_of_measurement: "%"
+    icon: "mdi:microphone-settings"
+  - platform: template
+    name: "Speaker Volume"
+    id: speaker_volume
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 5
+    initial_value: 60
+    restore_value: true
+    unit_of_measurement: "%"
+    icon: "mdi:volume-high"
+    set_action:
+      - media_player.volume_set:
+          id: speaker_media_player
+          volume: !lambda "return x / 100.0;"
+  # How many LEDs are lit. The rest (up to the physical num_leds) are forced OFF.
+  - platform: template
+    name: "Active LEDs"
+    id: active_leds
+    optimistic: true
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 30
+    restore_value: true
+    mode: box
+    icon: "mdi:led-strip-variant"
+
+# ---------- ON-DEVICE BUTTON (G41) -> cycles mic sensitivity ----------
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO41
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Atom Button"
+    on_press:
+      - number.increment:
+          id: mic_sensitivity
+          cycle: true
+
+# ---------- MIC LEVEL ----------
+globals:
+  - id: vu_target
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: vu
+    type: float
+    restore_value: no
+    initial_value: '0'
+
+sensor:
+  - platform: sound_level
+    id: sound_meter
+    microphone: i2s_mic
+    passive: false
+    measurement_duration: 50ms
+    rms:
+      name: "Mic RMS"
+      id: mic_rms
+      filters:
+        - lambda: |-
+            float s = id(mic_sensitivity).state;
+            if (isnan(s)) s = 50.0f;
+            float floor_db = -20.0f - (s / 100.0f) * 45.0f;
+            float ceil_db  = floor_db + 22.0f;
+            float nrm = (x - floor_db) / (ceil_db - floor_db);
+            if (!(nrm > 0.0f)) nrm = 0.0f;   // catches NaN/-inf/negative (NaN passes plain < and > checks)
+            if (nrm > 1.0f) nrm = 1.0f;
+            id(vu_target) = nrm;
+            return x;
+        - throttle: 200ms
+    peak:
+      name: "Mic Peak"
+
+# ---------- GLOBAL TAIL-OFF ----------
+# Forces LEDs [Active LEDs, num_leds) to black in ANY state - this is what keeps the
+# unused tail off even for a plain solid/monochrome color (no effect). Effects also
+# clear the tail per-frame; this interval is the safety net for the no-effect case.
+interval:
+  - interval: 30ms
+    then:
+      - lambda: |-
+          auto *al = static_cast<esphome::light::AddressableLight *>(id(led_strip).get_output());
+          if (al == nullptr) return;
+          int total = al->size();
+          float af = id(active_leds).state;
+          int act = (isnan(af) || af < 1.0f) ? total : (int) af;
+          if (act > total) act = total;
+          if (act < 0) act = 0;
+          for (int i = act; i < total; i++) (*al)[i] = Color(0, 0, 0);
+          al->schedule_show();
+
+# ---------- LED STRIP + EFFECTS ----------
+# Every effect lights [0, n) (n = Active LEDs, NaN-safe) and clears the tail [n, N).
+light:
+  - platform: esp32_rmt_led_strip
+    id: led_strip
+    name: "Strip"
+    pin: ${led_data_pin}
+    num_leds: ${num_leds}
+    chipset: WS2812
+    rgb_order: GRB
+    rmt_symbols: 64
+    default_transition_length: 0s
+    effects:
+      - addressable_lambda:
+          name: "VU Meter"
+          update_interval: 33ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.90f + t * 0.10f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            int lit = (int) roundf(c * n);
+            for (int i = 0; i < n; i++) {
+              if (i < lit) { float f = (float)i/(float)n;
+                it[i] = Color((uint8_t)(255*f), (uint8_t)(255*(1.0f-f)), 0);
+              } else it[i] = Color(0,0,0);
+            }
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Gravimeter"
+          update_interval: 30ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.88f + t * 0.12f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            float h = c * n; int ih = (int) h;
+            static float peak = 0;
+            for (int i = 0; i < n; i++) {
+              if (i < ih) { uint8_t hue = (uint8_t)(96.0f * (1.0f - (float)i/n));
+                it[i] = ESPHSVColor(hue, 255, 255).to_rgb();
+              } else it[i] = Color(0,0,0);
+            }
+            if (h > peak) peak = h; else { peak -= 0.3f; if (peak < 0) peak = 0; }
+            int p = (int) peak; if (p >= 0 && p < n) it[p] = Color(255,255,255);
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Gravcenter"
+          update_interval: 30ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.88f + t * 0.12f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            int ctr = n / 2; float h = c * ctr; int ih = (int) h;
+            static float peak = 0;
+            for (int i = 0; i < n; i++) it[i] = Color(0,0,0);
+            for (int k = 0; k < ih && k < ctr; k++) {
+              uint8_t hue = (uint8_t)(160.0f * (1.0f - (float)k/ctr));
+              Color col = ESPHSVColor(hue, 255, 255).to_rgb();
+              it[ctr + k] = col; if (ctr - 1 - k >= 0) it[ctr - 1 - k] = col;
+            }
+            if (h > peak) peak = h; else { peak -= 0.3f; if (peak < 0) peak = 0; }
+            int p = (int) peak;
+            if (ctr + p < n) it[ctr + p] = Color(255,255,255);
+            if (ctr - 1 - p >= 0) it[ctr - 1 - p] = Color(255,255,255);
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Pixels"
+          update_interval: 30ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.85f + t * 0.15f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static std::vector<float> b; if ((int)b.size() != n) b.assign(n, 0.0f);
+            static std::vector<uint8_t> hu; if ((int)hu.size() != n) hu.assign(n, 0);
+            for (int i = 0; i < n; i++) b[i] *= 0.82f;
+            int cnt = (int)(c * c * n * 0.6f);
+            for (int k = 0; k < cnt; k++) { int idx = random_uint32() % n; b[idx] = 1.0f; hu[idx] = (uint8_t)(random_uint32() & 0xFF); }
+            for (int i = 0; i < n; i++) it[i] = ESPHSVColor(hu[i], 255, (uint8_t)(b[i]*255)).to_rgb();
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Matripix"
+          update_interval: 33ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.9f + t * 0.1f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static std::vector<uint8_t> hue; if ((int)hue.size() != n) hue.assign(n, 0);
+            static std::vector<float> val; if ((int)val.size() != n) val.assign(n, 0.0f);
+            for (int i = n - 1; i > 0; i--) { hue[i] = hue[i-1]; val[i] = val[i-1]; }
+            static float ph = 0; ph += 3.0f;
+            hue[0] = (uint8_t)ph; val[0] = c;
+            for (int i = 0; i < n; i++) it[i] = ESPHSVColor(hue[i], 255, (uint8_t)(val[i]*255)).to_rgb();
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Color Music"
+          update_interval: 33ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.85f + t * 0.15f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static float phase = 0; phase += 0.6f + c * 5.0f;
+            uint8_t val = (uint8_t)(35 + c * 220);
+            for (int i = 0; i < n; i++) {
+              uint8_t hue = (uint8_t)(((int)phase + i * 256 / n) & 0xFF);
+              it[i] = ESPHSVColor(hue, 255, val).to_rgb();
+            }
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Matrix"
+          update_interval: 50ms
+          lambda: |-
+            float t = id(vu_target); float c = id(vu); if (!(t >= 0.0f)) t = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (t > c) c = t; else c = c * 0.9f + t * 0.1f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static std::vector<float> col; if ((int)col.size() != n) col.assign(n, 0.0f);
+            for (int i = n - 1; i > 0; i--) col[i] = col[i-1] * 0.92f;
+            if (c > 0.18f && random_float() < (0.2f + c)) col[0] = c; else col[0] = col[0] * 0.5f;
+            for (int i = 0; i < n; i++) { uint8_t g = (uint8_t)(col[i]*255); it[i] = Color(0, g, (uint8_t)(g/6)); }
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Fireworks"
+          update_interval: 33ms
+          lambda: |-
+            float lvl = id(vu_target); float c = id(vu); if (!(lvl >= 0.0f)) lvl = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (lvl > c) c = lvl; else c = c * 0.9f + lvl * 0.1f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static std::vector<float> buf; if ((int)buf.size() != n) buf.assign(n, 0.0f);
+            static std::vector<uint8_t> hue; if ((int)hue.size() != n) hue.assign(n, 0);
+            for (int i = 0; i < n; i++) buf[i] *= 0.86f;
+            static float prev = 0;
+            if (lvl > 0.45f && lvl > prev + 0.12f) {
+              int ctr = random_uint32() % n; uint8_t h = (uint8_t)(random_uint32() & 0xFF);
+              buf[ctr] = 1.0f; hue[ctr] = h;
+              if (ctr > 0) { buf[ctr-1] = 0.6f; hue[ctr-1] = h; }
+              if (ctr < n-1) { buf[ctr+1] = 0.6f; hue[ctr+1] = h; }
+            }
+            prev = lvl;
+            for (int i = 0; i < n; i++) it[i] = ESPHSVColor(hue[i], 255, (uint8_t)(buf[i]*255)).to_rgb();
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Strobe"
+          update_interval: 25ms
+          lambda: |-
+            float lvl = id(vu_target); float c = id(vu); if (!(lvl >= 0.0f)) lvl = 0.0f; if (!(c >= 0.0f)) c = 0.0f;
+            if (lvl > c) c = lvl; else c = c * 0.9f + lvl * 0.1f; id(vu) = c;
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static float prev = 0; static int flash = 0;
+            if (lvl > 0.40f && lvl > prev + 0.10f) flash = 2; prev = lvl;
+            uint8_t v = flash > 0 ? 255 : 0; if (flash > 0) flash--;
+            for (int i = 0; i < n; i++) it[i] = Color(v, v, v);
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "TV Simulator"
+          update_interval: 90ms
+          lambda: |-
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static int hold = 0;
+            static float cr = 120, cg = 140, cb = 200;
+            static float tr = 120, tg = 140, tb = 200;
+            static float sbr = 0.6f;
+            if (hold <= 0) {
+              hold = 5 + (int)(random_uint32() % 30);
+              uint32_t r = random_uint32();
+              uint8_t mode = (uint8_t)((r >> 4) % 10);
+              if (mode < 6) {
+                tb = 200 + random_uint32() % 56; tr = 90 + random_uint32() % 90; tg = 120 + random_uint32() % 80;
+              } else if (mode < 9) {
+                float w = 225 + random_uint32() % 31; tr = w; tg = w; tb = w;
+              } else {
+                tr = 200 + random_uint32() % 56; tg = 110 + random_uint32() % 70; tb = 40 + random_uint32() % 70;
+              }
+              sbr = 0.25f + (random_uint32() % 76) / 100.0f;
+            }
+            hold--;
+            float k = 0.18f;
+            cr += (tr - cr) * k; cg += (tg - cg) * k; cb += (tb - cb) * k;
+            float fl = sbr * (0.85f + (random_uint32() % 31) / 100.0f);
+            if (fl > 1.0f) fl = 1.0f; if (fl < 0.0f) fl = 0.0f;
+            uint8_t R = (uint8_t)(cr * fl), G = (uint8_t)(cg * fl), B = (uint8_t)(cb * fl);
+            for (int i = 0; i < n; i++) it[i] = Color(R, G, B);
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);

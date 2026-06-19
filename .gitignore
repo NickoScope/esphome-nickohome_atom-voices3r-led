@@ -1,0 +1,21 @@
+# --- Secrets: NEVER commit real credentials ---
+secrets.yaml
+
+# --- ESPHome build artifacts ---
+.esphome/
+*.bin
+*.elf
+*.ota.bin
+*.factory.bin
+
+# --- PlatformIO / toolchain ---
+.platformio/
+.pio/
+__pycache__/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
