@@ -16,6 +16,7 @@ All reactive effects are driven by the microphone level (`vu` / `vu_target`, a s
 | 8 | **Fireworks** | ✅ | 33 ms | On a detected beat, a colored burst spawns and fades. |
 | 9 | **Strobe** | ✅ | 25 ms | Whole strip flashes white on beats. |
 | 10 | **TV Simulator** | — | 90 ms | Non‑reactive. Bluish‑white TV glow with random "scenes", bright cuts and warm/dark scenes — looks like a working television from outside. Use it as a presence/occupancy ("away mode") deterrent. |
+| 11 | **Bell Glow** | — | 33 ms | Non‑reactive. Warm‑gold breathing glow that flows along the strip; used as the light accompaniment for the Westminster chimes (Home Assistant enables it while the bells play). Time‑based because the mic is off during speaker playback. |
 
 ## Tuning
 

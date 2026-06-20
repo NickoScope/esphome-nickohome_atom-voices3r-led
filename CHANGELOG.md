@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.1.0] — 2026-06-20
+
+### Added
+- **Westminster clock** (Home Assistant): [homeassistant/westminster-clock.yaml](homeassistant/westminster-clock.yaml)
+  plays the Westminster chimes at :30 and :00 and speaks the time on the hour (British
+  English via a TTS engine), with quiet hours 23:00–08:00 and a `Westminster Test` button
+  to preview/tune on demand.
+- **Bell Glow** light effect — warm‑gold breathing accompaniment for the chimes.
+- **Announcement ducking**: `Announce Ducking` switch (`mixer_speaker.apply_ducking` on the
+  music source) plus `Announce Volume` and `Announce Background` numbers — the announcement
+  plays loud while the music dips, then the previous volume / effect / playback all restore.
+  Chimes and the spoken time play as `announce: true` so any music or mic state is preserved.
+
+### Notes
+- The chime audio streams from a public URL (no local media hosting needed).
+- ESPHome 2026.6.0 gotcha: an `api:` user service with a `bool` variable fails to **link**
+  (config validates, compile dies) — the ducking control is a template `switch` instead.
+
 ## [1.0.0] — 2026-06-19
 
 First public release. Verified on ESPHome 2026.6.0 on the M5Stack Atom VoiceS3R.

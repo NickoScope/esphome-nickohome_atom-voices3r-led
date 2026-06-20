@@ -35,8 +35,13 @@ Shared freely so the next person doesn't lose an evening to it.
 - **Real microphone audio‑reactivity** — 9 sound‑reactive LED effects driven by the
   on‑board ES8311 mic (it listens to the room; play music on any speaker and the
   strip dances to it for real).
-- **TV‑presence simulator** — a 10th, non‑reactive effect that mimics the bluish‑white
+- **TV‑presence simulator** — a non‑reactive effect that mimics the bluish‑white
   flicker of a television; from the street it looks like someone is home watching TV.
+- **Westminster clock** — optional Home Assistant add‑on: the Westminster chimes at :30 and
+  :00, the time spoken aloud on the hour (British English), with a warm‑gold **Bell Glow**
+  light accompaniment and automatic **music ducking** (the announcement plays loud while the
+  music dips, then everything returns to exactly how it was). Quiet hours 23:00–08:00. See
+  [homeassistant/westminster-clock.yaml](homeassistant/westminster-clock.yaml).
 - **Home Assistant media player** — `media_player.atom_speaker` plays TTS / notifications /
   Music Assistant audio through the built‑in speaker.
 - **Automatic mic ↔ speaker bus hand‑off** — the single ES8311 codec can only do mic *or*
@@ -59,6 +64,7 @@ Shared freely so the next person doesn't lose an evening to it.
 | Fireworks | ✅ | Color bursts on beats |
 | Strobe | ✅ | White flash on beats |
 | TV Simulator | — | TV‑glow presence/occupancy simulation |
+| Bell Glow | — | Warm‑gold breathing glow; light accompaniment for the Westminster chimes |
 
 Full catalog: [docs/effects.md](docs/effects.md).
 
@@ -149,8 +155,21 @@ In Home Assistant the device exposes:
   "Home Assistant" player provider).
 - `sensor.mic_rms` / `sensor.mic_peak` — live mic levels.
 
+**Announcement controls** (used by the Westminster clock, below):
+- `number.announce_volume` — master volume while an announcement plays (loud; default 100 %).
+- `number.announce_background` — how loud the music stays while announcing: 100 % = no
+  ducking, 0 % = music muted (default 25 %).
+- `switch.announce_ducking` — live ducking flag; the script flips it automatically, you do
+  not toggle it by hand.
+
 **To get music‑reactive lights:** keep `light.strip` on with a reactive effect and play
 music on a normal speaker in the room — the mic does the rest.
+
+**Westminster clock (optional):** import
+[homeassistant/westminster-clock.yaml](homeassistant/westminster-clock.yaml) into Home
+Assistant for chimes at :30/:00, the time spoken on the hour, ducking and the Bell Glow
+accompaniment. It adds a `script.westminster_test` you can press to preview an announcement
+and tune the two volume levels without waiting for the next hour.
 
 ---
 

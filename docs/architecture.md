@@ -115,3 +115,34 @@ write per loop.
 > removed; all effects here are custom lambdas that honour it. A partition‑based variant was
 > also tried (a hidden raw strip + an active partition + an off tail partition); it is clean
 > in theory but is **not** used here.
+
+## Announcements: ducking, loud playback, and state restore
+
+The Westminster clock ([../homeassistant/westminster-clock.yaml](../homeassistant/westminster-clock.yaml))
+plays a chime — and on the hour the spoken time — *over* whatever the device was doing, then
+puts everything back. Three pieces make that work:
+
+1. **`announce: true`.** The speaker `media_player` declares two pipelines, `announcement`
+   and `media`, summed by a `mixer` speaker. Playing with `announce: true` routes audio to the
+   announcement pipeline, so a track on the media pipeline is **not** stopped — it keeps
+   playing underneath and continues after. The mic/idle state is likewise preserved.
+
+2. **Ducking + loud announcement.** To make the chime stand out, the HA script flips the
+   `Announce Ducking` switch (which calls `mixer_speaker.apply_ducking` on the **music** source
+   `media_spk`, `decibel_reduction = (100 − Announce Background)/2`) and raises the master
+   volume to `Announce Volume`. Afterwards it un‑ducks (0 dB) and restores the prior volume.
+   The strip's effect is snapshotted with `scene.create` and restored with `scene.turn_on`.
+
+3. **Why a `switch`, not an `api:` user service.** The natural design is an `api:` service
+   `announce_duck(active: bool)`. On ESPHome **2026.6.0 this fails to *link*** —
+   `undefined reference to get_execute_arg_value<bool>` / `to_service_arg_type<bool>` — even
+   though `esphome config` passes (it never compiles lambdas). A failed `compile` followed by
+   `esphome upload` will also silently flash the *previous* binary and still print "OTA
+   successful", so always gate the upload on `compile` succeeding. The workaround used here is
+   a template `switch` (`restore_mode: DISABLED`, so no action runs at boot) whose on/off
+   actions apply the ducking — no typed‑service template machinery involved.
+
+> Timing note: between two back‑to‑back announcements (chime → spoken time) the script waits
+> ~2 s. When an announcement ends with no media underneath, the media_player goes idle and the
+> mic/speaker hand‑off (§2) schedules a `speaker.stop`; the gap lets that settle so it cannot
+> clip the start of the next announcement.

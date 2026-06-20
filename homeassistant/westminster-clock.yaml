@@ -1,0 +1,150 @@
+# =============================================================================
+#  Westminster clock for the Atom VoiceS3R speaker (Home Assistant side)
+# =============================================================================
+#  Plays the Westminster chimes at :30 and :00, announces the time by voice on the
+#  hour, ducks any music that is playing, runs the "Bell Glow" light accompaniment,
+#  and restores the previous state afterwards. Quiet hours: silent 23:00-08:00.
+#
+#  Requires the device firmware in ../atom-voices3r-led.yaml, which exposes:
+#    - light.<device>_strip            effect "Bell Glow"
+#    - switch.<device>_announce_ducking ducks the music source during an announcement
+#    - number.<device>_announce_volume      master volume used while announcing (loud)
+#    - number.<device>_announce_background   how loud the music stays while announcing
+#    - media_player.<device>_atom_speaker    the native ESPHome speaker (announcement-capable)
+#
+#  Entity ids below assume the ESPHome device name "atom-voice" -> prefix "atom_voice".
+#  Adjust the prefix if your device is named differently.
+#
+#  Audio: the chime is streamed from a public URL (no local hosting needed). The spoken
+#  time uses a TTS engine; this example uses Home Assistant Cloud (Nabu Casa). Swap
+#  `tts.home_assistant_cloud` for your engine (e.g. tts.piper, tts.google_translate_*).
+#
+#  Install: merge these `script:` and `automation:` blocks into your configuration
+#  (e.g. configuration.yaml, or your scripts.yaml / automations.yaml includes) and
+#  reload scripts + automations (or restart Home Assistant).
+# =============================================================================
+
+script:
+  # Core routine. kind = "half" (chimes only) or "hour" (chimes + spoken time).
+  # Quiet hours are enforced by the automations below, NOT here, so the test button
+  # and manual runs work at any time.
+  westminster_chime:
+    alias: Westminster Chime
+    icon: mdi:bell-ring
+    mode: single
+    fields:
+      kind:
+        description: half or hour
+        example: hour
+    sequence:
+      - variables:
+          prev_vol: "{{ state_attr('media_player.atom_voice_atom_speaker','volume_level') | float(0.5) }}"
+          ann_vol: "{{ states('number.atom_voice_announce_volume') | float(100) / 100 }}"
+      # Snapshot the strip so we can restore its exact effect/state afterwards.
+      - service: scene.create
+        data:
+          scene_id: atom_strip_before_chime
+          snapshot_entities:
+            - light.atom_voice_strip
+      - service: light.turn_on
+        target:
+          entity_id: light.atom_voice_strip
+        data:
+          effect: Bell Glow
+      # Duck the music, then raise the master volume so the announcement is loud.
+      - service: switch.turn_on
+        target:
+          entity_id: switch.atom_voice_announce_ducking
+      - service: media_player.volume_set
+        target:
+          entity_id: media_player.atom_voice_atom_speaker
+        data:
+          volume_level: "{{ ann_vol }}"
+      # The chime plays as an ANNOUNCEMENT (announce: true) so any music/mic state is
+      # preserved and resumes automatically when the announcement ends.
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.atom_voice_atom_speaker
+        data:
+          media_content_id: https://www.orangefreesounds.com/wp-content/uploads/2016/06/Westminster-chimes.mp3
+          media_content_type: music
+          announce: true
+      - delay:
+          seconds: 15
+      # On the hour, also announce the time. The 2 s gap lets the device settle the
+      # mic/speaker hand-off so it does not clip the spoken announcement.
+      - if:
+          - condition: template
+            value_template: "{{ kind == 'hour' }}"
+        then:
+          - variables:
+              hour12: "{{ 12 if now().hour % 12 == 0 else now().hour % 12 }}"
+          - variables:
+              phrase: "It's {{ hour12 }} o'clock"
+          - delay:
+              seconds: 2
+          - service: media_player.play_media
+            target:
+              entity_id: media_player.atom_voice_atom_speaker
+            data:
+              media_content_id: "media-source://tts/tts.home_assistant_cloud?language=en-GB&message={{ phrase | urlencode }}"
+              media_content_type: music
+              announce: true
+          - delay:
+              seconds: 5
+      # Remove ducking, restore the previous volume and the previous light state.
+      - service: switch.turn_off
+        target:
+          entity_id: switch.atom_voice_announce_ducking
+      - service: media_player.volume_set
+        target:
+          entity_id: media_player.atom_voice_atom_speaker
+        data:
+          volume_level: "{{ prev_vol }}"
+      - service: scene.turn_on
+        target:
+          entity_id: scene.atom_strip_before_chime
+
+  # Test button: runs the full hour announcement on demand (any time) so you can tune
+  # the Announce Volume / Announce Background levels without waiting for the next hour.
+  westminster_test:
+    alias: Westminster Test (chime + spoken time)
+    icon: mdi:bell-check
+    mode: single
+    sequence:
+      - service: script.westminster_chime
+        data:
+          kind: hour
+
+automation:
+  - alias: Westminster - half hour
+    description: Chime + Bell Glow at :30 (quiet 23:00-08:00)
+    mode: single
+    trigger:
+      - platform: time_pattern
+        minutes: "30"
+        seconds: "0"
+    condition:
+      - condition: time
+        after: "08:00:00"
+        before: "23:00:00"
+    action:
+      - service: script.westminster_chime
+        data:
+          kind: half
+
+  - alias: Westminster - on the hour
+    description: Chime + spoken time + Bell Glow at :00 (quiet 23:00-08:00)
+    mode: single
+    trigger:
+      - platform: time_pattern
+        minutes: "0"
+        seconds: "0"
+    condition:
+      - condition: time
+        after: "08:00:00"
+        before: "23:00:00"
+    action:
+      - service: script.westminster_chime
+        data:
+          kind: hour

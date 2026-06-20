@@ -1,6 +1,11 @@
 # =============================================================================
 #  M5Stack Atom VoiceS3R (EchoS3R) -> ESPHome audio-reactive LED controller
-#  + Home Assistant media player + TV-presence simulator.
+#  + Home Assistant media player + TV-presence simulator + Westminster clock.
+#
+#  The Home Assistant side of the Westminster clock (chimes at :30/:00, spoken time
+#  on the hour, ducking + light accompaniment) lives in homeassistant/westminster-clock.yaml.
+#  This firmware provides the building blocks it drives: the "Bell Glow" light effect,
+#  the "Announce Ducking" switch, and the "Announce Volume"/"Announce Background" knobs.
 #
 #  num_leds = PHYSICAL strip length (drive every LED). "Active LEDs" sets how many
 #  are lit. Every effect lights [0, active) and the unused tail [active, num_leds)
@@ -125,6 +130,30 @@ switch:
     id: spk_enable
     internal: true
     restore_mode: ALWAYS_ON
+  # Ducking toggle the Home Assistant Westminster script flips around an announcement.
+  # ON  -> reduce the music source (media_spk) by (100 - Announce Background)/2 dB
+  # OFF -> remove ducking. restore_mode DISABLED = no action runs at boot (a restoring
+  # switch that touched the bus caused a setup-time boot loop before).
+  - platform: template
+    name: "Announce Ducking"
+    id: announce_ducking
+    optimistic: true
+    restore_mode: DISABLED
+    icon: "mdi:volume-mute"
+    turn_on_action:
+      - mixer_speaker.apply_ducking:
+          id: media_spk
+          decibel_reduction: !lambda |-
+            float bg = id(announce_bg).state; if (isnan(bg)) bg = 25.0f;
+            int db = (int) ((100.0f - bg) * 0.5f);   // bg 100% -> 0 dB, bg 0% -> 50 dB
+            if (db < 0) db = 0; if (db > 50) db = 50;
+            return db;
+          duration: 0.4s
+    turn_off_action:
+      - mixer_speaker.apply_ducking:
+          id: media_spk
+          decibel_reduction: 0
+          duration: 0.5s
 
 # ---------- HA CONTROLS ----------
 number:
@@ -166,6 +195,32 @@ number:
     restore_value: true
     mode: box
     icon: "mdi:led-strip-variant"
+  # Master volume the HA Westminster script sets WHILE an announcement (chime / spoken
+  # time) plays, so the announcement is loud regardless of the normal listening volume.
+  - platform: template
+    name: "Announce Volume"
+    id: announce_volume
+    optimistic: true
+    min_value: 10
+    max_value: 100
+    step: 5
+    initial_value: 100
+    restore_value: true
+    unit_of_measurement: "%"
+    icon: "mdi:bullhorn"
+  # How loud the background music stays while an announcement plays: 100% = no ducking,
+  # 0% = music muted. Drives the dB reduction in the "Announce Ducking" switch.
+  - platform: template
+    name: "Announce Background"
+    id: announce_bg
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 5
+    initial_value: 25
+    restore_value: true
+    unit_of_measurement: "%"
+    icon: "mdi:music-note-off"
 
 # ---------- ON-DEVICE BUTTON (G41) -> cycles mic sensitivity ----------
 binary_sensor:
@@ -423,4 +478,19 @@ light:
             if (fl > 1.0f) fl = 1.0f; if (fl < 0.0f) fl = 0.0f;
             uint8_t R = (uint8_t)(cr * fl), G = (uint8_t)(cg * fl), B = (uint8_t)(cb * fl);
             for (int i = 0; i < n; i++) it[i] = Color(R, G, B);
+            for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      # Bell Glow - gentle warm-gold breathing glow, used as the smooth light accompaniment
+      # for the Westminster chimes (Home Assistant turns this effect on while the bells play).
+      # Time-based (not mic-reactive) because the mic is off during speaker playback.
+      - addressable_lambda:
+          name: "Bell Glow"
+          update_interval: 33ms
+          lambda: |-
+            int N = it.size(); float af = id(active_leds).state; int n = (isnan(af) || af < 1.0f) ? N : (int) af; if (n > N) n = N;
+            static float ph = 0; ph = fmodf(ph + 0.06f, 6.2831853f);
+            for (int i = 0; i < n; i++) {
+              float b = 0.35f + 0.65f * (0.5f + 0.5f * sinf(ph + i * 0.12f));
+              it[i] = Color((uint8_t)(255*b), (uint8_t)(150*b), (uint8_t)(40*b));
+            }
             for (int i = n; i < N; i++) it[i] = Color(0,0,0);
