@@ -51,6 +51,9 @@ Shared freely so the next person doesn't lose an evening to it.
   Music Assistant audio through the built‑in speaker.
 - **Ambient (non‑audio) effects** — Fireplace, Matrix Rain, Terminal, Fireworks Burst and
   Chaos for mood lighting that doesn't need the microphone.
+- **On‑strip HH:MM:SS clock** — Analog / Digital / Binary, 12‑hour, time from Home Assistant;
+  pick the look with the `Clock Style` select. A visual‑only, non‑reactive effect that owns
+  the whole strip.
 - **Smart mic ↔ amp arbitration** — the mic and speaker share one I²S bus, so the mic is
   **OFF by default** (amplifier ON) and turns ON only while an audio‑reactive effect is the
   active effect (which also frees the bus for clean media playback). No more mic/speaker
@@ -78,6 +81,7 @@ Shared freely so the next person doesn't lose an evening to it.
 | Terminal | — | Running cursor with a fading green trail + random "characters" |
 | Fireworks Burst | — | Random colored bursts that fade (non‑audio) |
 | Chaos | — | Every pixel flickers to a random color |
+| Clock | — | On‑strip HH:MM:SS clock (12‑hour, time from HA); Analog / Digital / Binary via the `Clock Style` select |
 
 The reactive effects need the microphone; the non‑reactive ones (✱ "—") are pure ambient
 animations. **The mic is OFF by default and only turns ON while an audio‑reactive effect is

@@ -58,6 +58,11 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
+# Time source for the on-strip clock (from Home Assistant)
+time:
+  - platform: homeassistant
+    id: ha_time
+
 # ---------- AUDIO HARDWARE (ES8311 codec) ----------
 i2c:
   - id: i2c0
@@ -219,6 +224,20 @@ number:
     unit_of_measurement: "%"
     icon: "mdi:music-note-off"
 
+# ---------- CLOCK STYLE (read by the "Clock" light effect) ----------
+select:
+  - platform: template
+    name: "Clock Style"
+    id: clock_style
+    optimistic: true
+    options:
+      - "Analog"
+      - "Digital"
+      - "Binary"
+    initial_option: "Analog"
+    restore_value: true
+    icon: "mdi:clock-outline"
+
 # ---------- ON-DEVICE BUTTON (G41) -> cycles mic sensitivity ----------
 binary_sensor:
   - platform: gpio
@@ -288,6 +307,7 @@ interval:
       - lambda: |-
           auto *al = static_cast<esphome::light::AddressableLight *>(id(led_strip).get_output());
           if (al == nullptr) return;
+          if (id(led_strip).get_effect_name() == "Clock") return;   // Clock owns the whole strip
           int total = al->size();
           float af = id(active_leds).state;
           int act = (isnan(af) || af < 1.0f) ? total : (int) af;
@@ -604,3 +624,53 @@ light:
             for (int i = 0; i < n; i++) { val[i] *= 0.80f; if ((random_uint32() % 100) < 18) { hue[i] = (uint8_t)(random_uint32() & 0xFF); val[i] = 1.0f; } }
             for (int i = 0; i < n; i++) it[i] = ESPHSVColor(hue[i], 255, (uint8_t)(val[i]*255)).to_rgb();
             for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      # Clock - on-strip HH:MM:SS clock, 12-hour, time from Home Assistant. Style picked by the
+      # "Clock Style" select (Analog / Digital / Binary). Owns the whole strip (the tail-off
+      # interval skips this effect); not mic-reactive.
+      - addressable_lambda:
+          name: "Clock"
+          update_interval: 50ms
+          lambda: |-
+            int N = it.size();
+            for (int i = 0; i < N; i++) it[i] = Color(0,0,0);
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) { it[0] = Color(60,0,0); return; }
+            int hh = t.hour, mm = t.minute, ss = t.second; int h12 = hh % 12;
+            std::string stl = id(clock_style).state;
+            int mode = (stl == "Digital") ? 1 : (stl == "Binary") ? 2 : 0;
+            if (mode == 0) {
+              // ANALOG: 60-LED face. White = inactive; the 12 hour marks are light-red;
+              // bright-red = hour hand, bright-green = minute hand, blue = running second.
+              int C = 60; if (C > N) C = N;
+              for (int i = 0; i < C; i++) it[i] = Color(40,40,40);                                 // white inactive face
+              for (int k = 0; k < 12; k++) { int p = k*5; if (p < C) it[p] = Color(110,25,25); }    // light-red hour marks (1..12)
+              float sf = ss + (float)(millis() % 1000) / 1000.0f;
+              int ps = ((int) roundf(sf)) % 60; int pm = mm % 60; int ph = ((h12 * 5) + mm / 12) % 60;
+              for (int d = -1; d <= 1; d++) { int p = ((ph + d) % 60 + 60) % 60; if (p < C) it[p] = Color(255,0,0); }  // bright-red hour hand
+              if (pm < C) it[pm] = Color(0,255,0);                                                  // bright-green minute
+              if (ps < C) it[ps] = Color(0,0,255);                                                  // blue second
+            } else if (mode == 1) {
+              // DIGITAL: 6 groups of 10 LEDs; each digit 0-9 shown as a bar (red H, green M, blue S)
+              int h12d = (h12 == 0) ? 12 : h12;
+              int dig[6] = { h12d/10, h12d%10, mm/10, mm%10, ss/10, ss%10 };
+              Color cc[6] = { Color(200,0,0), Color(200,0,0), Color(0,180,0), Color(0,180,0), Color(0,0,220), Color(0,0,220) };
+              int gw = 10;
+              for (int g = 0; g < 6; g++) {
+                int base = g * gw;
+                for (int j = 0; j < dig[g] && j < gw; j++) { int p = base + j; if (p < N) it[p] = cc[g]; }
+                int pe = base + gw - 1; if (pe < N) it[pe] = Color(6,6,6);
+              }
+            } else {
+              // BINARY (BCD): per-field bit columns with a gap; red H, green M, blue S
+              int h12d = (h12 == 0) ? 12 : h12;
+              int fld[6] = { h12d/10, h12d%10, mm/10, mm%10, ss/10, ss%10 };
+              int bits[6] = { 2, 4, 3, 4, 3, 4 };
+              Color cc[6] = { Color(200,0,0), Color(200,0,0), Color(0,180,0), Color(0,180,0), Color(0,0,220), Color(0,0,220) };
+              int pos = 0;
+              for (int f = 0; f < 6; f++) {
+                int v = fld[f];
+                for (int b = 0; b < bits[f]; b++) { int p = pos + b; if (p < N) it[p] = (v & (1 << b)) ? cc[f] : Color(6,6,6); }
+                pos += bits[f] + 1;
+              }
+            }

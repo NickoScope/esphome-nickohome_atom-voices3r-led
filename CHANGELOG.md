@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.4.0] — 2026-06-20
+
+### Added
+- **On‑strip clock** — a new **Clock** light effect that renders an **HH:MM:SS clock**
+  (12‑hour) directly on the LED strip, with three styles selectable at runtime:
+  - **Analog** — a 60‑LED clock face unrolled along the strip (dim‑white face, light‑red
+    hour marks, bright‑red hour hand, bright‑green minute hand, smooth blue running second).
+  - **Digital** — 6 groups of 10 LEDs (`H H : M M : S S`), each digit drawn as a bar
+    (red hours / green minutes / blue seconds).
+  - **Binary** — BCD bit columns per field (compact), same red/green/blue color coding.
+- **`time:` component** (`platform: homeassistant`, id `ha_time`) — the clock reads the
+  current time from Home Assistant.
+- **`Clock Style` select** (`Analog` / `Digital` / `Binary`) — picks the on‑strip clock look.
+- The **Clock** effect is **visual‑only and non‑reactive**: it **owns the whole strip** (the
+  30 ms tail‑off interval skips it) and the mic↔amp arbiter keeps the mic OFF / amplifier ON
+  while it is showing.
+
 ## [1.3.0] — 2026-06-20
 
 ### Added

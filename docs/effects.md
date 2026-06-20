@@ -22,10 +22,18 @@ All reactive effects are driven by the microphone level (`vu` / `vu_target`, a s
 | 14 | **Terminal** | — | 50 ms | Non‑reactive. A running cursor leaves a fading green trail while random green "characters" blink — like a terminal printing output. |
 | 15 | **Fireworks Burst** | — | 33 ms | Non‑reactive. Random colored bursts spawn and fade across the strip on a timer (the audio "Fireworks" effect without needing a beat). |
 | 16 | **Chaos** | — | 40 ms | Non‑reactive. Every pixel randomly flickers to a new random color and fades — colorful noise. |
+| 17 | **Clock** | — | 50 ms | Non‑reactive, visual‑only. An on‑strip **HH:MM:SS clock** (12‑hour, time read from Home Assistant via the `time` component). The look is chosen by the **`Clock Style`** select — **Analog / Digital / Binary**. This effect **owns the whole strip** (the global tail‑off interval skips it), so `Active LEDs` does not apply while it runs. |
+
+### Clock styles (the `Clock Style` select)
+
+- **Analog** — a 60‑LED clock face unrolled along the strip: dim‑white = the inactive face, the 12 hour marks light‑red, **bright‑red = hour hand**, **bright‑green = minute hand**, **blue = the running second** (smooth, sub‑second via `millis()`).
+- **Digital** — 6 groups of 10 LEDs (`H H : M M : S S`); each digit 0–9 is shown as a bar — **red hours / green minutes / blue seconds**.
+- **Binary** — BCD bit columns per field (compact, geeky); same red/green/blue color coding for hours / minutes / seconds.
 
 **Mic note:** the reactive effects (rows 1–9) need the microphone; selecting one turns the mic
-ON (and the amplifier OFF). The non‑reactive effects (rows 10–16) keep the mic OFF / amplifier
-ON, since they don't need audio. See [architecture.md](architecture.md) for the mic↔amp arbiter.
+ON (and the amplifier OFF). The non‑reactive effects (rows 10–17, including **Clock**) keep the
+mic OFF / amplifier ON, since they don't need audio. See [architecture.md](architecture.md) for
+the mic↔amp arbiter.
 
 ## Tuning
 
