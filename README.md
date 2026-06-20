@@ -9,6 +9,11 @@
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-local%20API-41BDF5)](https://www.home-assistant.io)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
+<p align="center">
+  <img src="images/atom-voices3r-led-1.jpg" width="49%" alt="M5Stack Atom VoiceS3R driving a WS2812/SK6812 strip (cool)" />
+  <img src="images/atom-voices3r-led-2.jpg" width="49%" alt="M5Stack Atom VoiceS3R driving a WS2812/SK6812 strip (warm)" />
+</p>
+
 To the best of my knowledge this is the **first public ESPHome configuration that
 gets the ES8311 microphone working on the M5Stack Atom VoiceS3R/EchoS3R** (the trick
 is a single `channel: left` line — see [docs/architecture.md](docs/architecture.md)).
@@ -44,9 +49,12 @@ Shared freely so the next person doesn't lose an evening to it.
   [homeassistant/westminster-clock.yaml](homeassistant/westminster-clock.yaml).
 - **Home Assistant media player** — `media_player.atom_speaker` plays TTS / notifications /
   Music Assistant audio through the built‑in speaker.
-- **Automatic mic ↔ speaker bus hand‑off** — the single ES8311 codec can only do mic *or*
-  speaker at a time; the config switches automatically (play → mic off; stop/pause → mic
-  back on) so both features coexist.
+- **Ambient (non‑audio) effects** — Fireplace, Matrix Rain, Terminal, Fireworks Burst and
+  Chaos for mood lighting that doesn't need the microphone.
+- **Smart mic ↔ amp arbitration** — the mic and speaker share one I²S bus, so the mic is
+  **OFF by default** (amplifier ON) and turns ON only while an audio‑reactive effect is the
+  active effect (which also frees the bus for clean media playback). No more mic/speaker
+  contention.
 - **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders, plus the physical
   top button cycles sensitivity on the device.
 - **100% local** — native HA API with encryption, OTA updates, no cloud dependency.
@@ -65,6 +73,15 @@ Shared freely so the next person doesn't lose an evening to it.
 | Strobe | ✅ | White flash on beats |
 | TV Simulator | — | TV‑glow presence/occupancy simulation |
 | Bell Glow | — | Warm‑gold breathing glow; light accompaniment for the Westminster chimes |
+| Fireplace | — | Flickering fire / fireplace simulation (Fire2012‑style) |
+| Matrix Rain | — | Continuous green "code rain" (non‑audio) |
+| Terminal | — | Running cursor with a fading green trail + random "characters" |
+| Fireworks Burst | — | Random colored bursts that fade (non‑audio) |
+| Chaos | — | Every pixel flickers to a random color |
+
+The reactive effects need the microphone; the non‑reactive ones (✱ "—") are pure ambient
+animations. **The mic is OFF by default and only turns ON while an audio‑reactive effect is
+active** (it shares one I²S bus with the speaker), which keeps the bus free for media playback.
 
 Full catalog: [docs/effects.md](docs/effects.md).
 

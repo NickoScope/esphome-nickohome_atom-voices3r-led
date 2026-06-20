@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.3.0] — 2026-06-20
+
+### Added
+- **5 new non-audio (ambient) light effects:** **Fireplace** (Fire2012-style fire),
+  **Matrix Rain** (continuous green code-rain), **Terminal** (running cursor + random green
+  characters), **Fireworks Burst** (random colored bursts), and **Chaos** (random per-pixel
+  flicker). They need no microphone, so the arbiter keeps the mic OFF / amplifier ON.
+- **Project photos** (`images/`) added to the README.
+
+### Changed
+- `num_leds` 100 → **120** to match the physical strip (M5Stack Unit RGB Strip 2m, SK6812);
+  `Active LEDs` maximum raised to 120.
+
 ## [1.2.0] — 2026-06-20
 
 ### Changed

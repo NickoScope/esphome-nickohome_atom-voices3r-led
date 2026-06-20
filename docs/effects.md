@@ -17,6 +17,15 @@ All reactive effects are driven by the microphone level (`vu` / `vu_target`, a s
 | 9 | **Strobe** | ✅ | 25 ms | Whole strip flashes white on beats. |
 | 10 | **TV Simulator** | — | 90 ms | Non‑reactive. Bluish‑white TV glow with random "scenes", bright cuts and warm/dark scenes — looks like a working television from outside. Use it as a presence/occupancy ("away mode") deterrent. |
 | 11 | **Bell Glow** | — | 33 ms | Non‑reactive. Warm‑gold breathing glow that flows along the strip; used as the light accompaniment for the Westminster chimes (Home Assistant enables it while the bells play). Time‑based because the mic is off during speaker playback. |
+| 12 | **Fireplace** | — | 60 ms | Non‑reactive. Flickering fire / fireplace simulation (Fire2012‑style heat model: cool‑down, upward heat diffusion, random sparks at the base, heat‑map colors). |
+| 13 | **Matrix Rain** | — | 60 ms | Non‑reactive. Continuous green "code rain" falling along the strip with white drop heads (always animating, no audio). |
+| 14 | **Terminal** | — | 50 ms | Non‑reactive. A running cursor leaves a fading green trail while random green "characters" blink — like a terminal printing output. |
+| 15 | **Fireworks Burst** | — | 33 ms | Non‑reactive. Random colored bursts spawn and fade across the strip on a timer (the audio "Fireworks" effect without needing a beat). |
+| 16 | **Chaos** | — | 40 ms | Non‑reactive. Every pixel randomly flickers to a new random color and fades — colorful noise. |
+
+**Mic note:** the reactive effects (rows 1–9) need the microphone; selecting one turns the mic
+ON (and the amplifier OFF). The non‑reactive effects (rows 10–16) keep the mic OFF / amplifier
+ON, since they don't need audio. See [architecture.md](architecture.md) for the mic↔amp arbiter.
 
 ## Tuning
 
