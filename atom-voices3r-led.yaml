@@ -17,7 +17,7 @@ substitutions:
   name: atom-voice
   friendly_name: "Atom Voice"
   led_data_pin: GPIO2      # Grove port, yellow wire
-  num_leds: "100"          # PHYSICAL strip length
+  num_leds: "120"          # PHYSICAL strip length (M5Stack Unit RGB Strip 2m, 120x SK6812)
 
 esphome:
   name: ${name}
@@ -186,7 +186,7 @@ number:
     id: active_leds
     optimistic: true
     min_value: 1
-    max_value: 100
+    max_value: 120
     step: 1
     initial_value: 30
     restore_value: true
