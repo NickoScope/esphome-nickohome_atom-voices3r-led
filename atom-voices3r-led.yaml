@@ -26,7 +26,9 @@ esphome:
     priority: -100
     then:
       - delay: 1s
-      - speaker.stop: i2s_speaker   # release idle speaker driver -> mic owns the shared bus
+      - sound_level.stop: sound_meter   # mic OFF by default (frees the shared I2S bus)
+      - switch.turn_on: spk_enable       # amplifier ON by default
+      - lambda: 'id(mic_active) = false;'
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -111,17 +113,12 @@ media_player:
       speaker: announcement_spk
     media_pipeline:
       speaker: media_spk
-    on_play:        # playback started -> give the bus to the speaker (mic off)
+    on_play:        # playback started -> immediately free the bus (mic off, amp on)
       - sound_level.stop: sound_meter
-      - lambda: 'id(vu) = 0; id(vu_target) = 0;'
-    on_idle:        # playback finished -> hand the bus back to the mic
-      - delay: 1s
-      - speaker.stop: i2s_speaker
-      - sound_level.start: sound_meter
-    on_pause:
-      - delay: 500ms
-      - speaker.stop: i2s_speaker
-      - sound_level.start: sound_meter
+      - switch.turn_on: spk_enable
+      - lambda: 'id(mic_active) = false; id(vu) = 0; id(vu_target) = 0;'
+    # on_idle / on_pause intentionally omitted: the MIC<->AMP arbiter interval restores the
+    # mic (only when an audio-reactive effect is active) once the player returns to idle.
 
 # ---------- AMPLIFIER ENABLE ----------
 switch:
@@ -247,6 +244,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '0'
+  # MIC<->AMP arbiter state
+  - id: mic_active
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: want_mic
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
 sensor:
   - platform: sound_level
@@ -289,6 +295,36 @@ interval:
           if (act < 0) act = 0;
           for (int i = act; i < total; i++) (*al)[i] = Color(0, 0, 0);
           al->schedule_show();
+
+  # ---------- MIC <-> AMP ARBITER ----------
+  # Mic is ON only while an audio-reactive effect is the active light effect AND the media
+  # player is idle. Otherwise mic OFF + amplifier ON (the default) so the speaker never
+  # fights the microphone for the shared I2S bus. Only acts on transitions (mic_active flag).
+  - interval: 250ms
+    then:
+      - lambda: |-
+          std::string e = id(led_strip).get_effect_name();
+          bool reactive = (e=="VU Meter"||e=="Gravimeter"||e=="Gravcenter"||e=="Pixels"||
+                           e=="Matripix"||e=="Color Music"||e=="Matrix"||e=="Fireworks"||e=="Strobe");
+          // Mic follows the EFFECT only: a reactive effect -> mic ON + amp OFF. Playback is
+          // handled by switching to a non-reactive effect (Bell Glow) which turns the mic off.
+          id(want_mic) = reactive;
+      - if:
+          condition:
+            lambda: 'return id(want_mic) && !id(mic_active);'
+          then:
+            - media_player.stop:               # stop playback -> release the shared I2S bus
+                id: speaker_media_player
+            - switch.turn_off: spk_enable      # amp off while recording
+            - sound_level.start: sound_meter   # mic on (retries until the bus is free)
+            - lambda: 'id(mic_active) = true;'
+      - if:
+          condition:
+            lambda: 'return !id(want_mic) && id(mic_active);'
+          then:
+            - sound_level.stop: sound_meter    # mic off
+            - switch.turn_on: spk_enable        # amp back on
+            - lambda: 'id(mic_active) = false;'
 
 # ---------- LED STRIP + EFFECTS ----------
 # Every effect lights [0, n) (n = Active LEDs, NaN-safe) and clears the tail [n, N).

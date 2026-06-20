@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.2.0] — 2026-06-20
+
+### Changed
+- **Mic/amp I2S-bus arbitration redesigned.** The microphone is now **OFF by default**
+  (amplifier ON) and turns ON only while an audio-reactive light effect is the active effect.
+  Selecting a reactive effect stops any playback and frees the shared ES8311/I2S bus;
+  deselecting it (or selecting a non-reactive effect like TV Simulator / Bell Glow / None)
+  returns to amp-ON / mic-OFF so the speaker can play. This removes the half-duplex bus
+  contention that previously let the microphone hold the bus and wedge the speaker. New
+  `MIC<->AMP ARBITER` 250 ms interval; `on_boot` starts mic-OFF/amp-ON; `media_player on_play`
+  frees the bus immediately. (`on_idle`/`on_pause` mic-restart handlers removed — the arbiter
+  restores the mic when an audio-reactive effect is active.)
+
+### Added
+- **Cuckoo announcement style** (Home Assistant runtime): an `input_select` switches the time
+  announcement between **Westminster bells + English voice** and a **cuckoo clock** (cuckoos N
+  times on the hour, once at the half-hour) with the time spoken in **Russian**. The cuckoo
+  tone is synthesized and served from Home Assistant local media.
+
 ## [1.1.0] — 2026-06-20
 
 ### Added
