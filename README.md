@@ -49,6 +49,9 @@ Shared freely so the next person doesn't lose an evening to it.
   [homeassistant/westminster-clock.yaml](homeassistant/westminster-clock.yaml).
 - **Home Assistant media player** — `media_player.atom_speaker` plays TTS / notifications /
   Music Assistant audio through the built‑in speaker.
+- **Text‑to‑Speech announcements** — type any text in Home Assistant and the device speaks it
+  (Piper TTS). A ready‑to‑use `input_text` + `script` + Lovelace card:
+  [homeassistant/text-to-speech-announce.yaml](homeassistant/text-to-speech-announce.yaml).
 - **Ambient (non‑audio) effects** — Fireplace, Matrix Rain, Terminal, Fireworks Burst and
   Chaos for mood lighting that doesn't need the microphone.
 - **On‑strip HH:MM:SS clock** — Analog / Digital / Binary, 12‑hour, time from Home Assistant;
@@ -227,6 +230,16 @@ Three non‑obvious things make this device work; full write‑up in
   PC (the on‑device speaker's own digital audio level is not exposed by ESPHome, so true
   "react to my media player" needs an external FFT sender).
 - HA blueprint: auto‑enable **TV Simulator** when away + after dark.
+
+### Voice assistant (experimental — not shipped)
+
+I got a full **Home Assistant Voice (Assist) satellite** working end‑to‑end on this same board
+(on‑device "Okay Nabu" wake word → Whisper STT → conversation agent → Piper TTS), but it is **not**
+in the released firmware: a **Music Assistant auto‑resuming queue claims the half‑duplex I²S bus**
+(`Parent bus is busy`), so the spoken reply can't reach the speaker. It's an honest experiment, not a
+dead end — the full write‑up, what worked, and an **open question inviting help** are in
+[docs/voice-assistant-experiment.md](docs/voice-assistant-experiment.md). If you've shipped an
+EchoS3R/Atom satellite alongside Music Assistant, I'd love to hear how you avoided the bus war.
 
 ---
 

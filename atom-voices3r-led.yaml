@@ -644,7 +644,7 @@ light:
               // bright-red = hour hand, bright-green = minute hand, blue = running second.
               int C = 60; if (C > N) C = N;
               for (int i = 0; i < C; i++) it[i] = Color(40,40,40);                                 // white inactive face
-              for (int k = 0; k < 12; k++) { int p = k*5; if (p < C) it[p] = Color(110,25,25); }    // light-red hour marks (1..12)
+              for (int k = 0; k <= 12; k++) { int p = k*5; if (p < N) it[p] = Color(110,25,25); }    // light-red hour marks; k=12 (LED 60) duplicates the 12 o'clock mark at the far end
               float sf = ss + (float)(millis() % 1000) / 1000.0f;
               int ps = ((int) roundf(sf)) % 60; int pm = mm % 60; int ph = ((h12 * 5) + mm / 12) % 60;
               for (int d = -1; d <= 1; d++) { int p = ((ph + d) % 60 + 60) % 60; if (p < C) it[p] = Color(255,0,0); }  // bright-red hour hand

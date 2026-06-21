@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.5.0] — 2026-06-21
+
+### Added
+- **Text‑to‑Speech announcement HA example** — type any text in Home Assistant and the device
+  speaks it via Piper (an `input_text` + `script` + Lovelace card):
+  [homeassistant/text-to-speech-announce.yaml](homeassistant/text-to-speech-announce.yaml).
+- **Voice‑assistant experiment notes** — a write‑up of the Home Assistant Voice (Assist) satellite
+  experiment on this board: it ran end‑to‑end (on‑device "Okay Nabu" wake word → Whisper STT →
+  conversation agent → Piper TTS) but is blocked by a Music Assistant I²S‑bus conflict; documents
+  what worked, the VAD removal and media/wake‑word handoff, and ends with an open question inviting
+  help: [docs/voice-assistant-experiment.md](docs/voice-assistant-experiment.md). (The voice YAML is
+  preserved in git history.)
+
+### Changed
+- **Analog clock** — the hour‑marks loop now draws a 12‑o'clock end mark at LED 60 (light‑red),
+  duplicating the 12‑o'clock mark at the far end of the unrolled dial so the face visually closes
+  the loop.
+
 ## [1.4.0] — 2026-06-20
 
 ### Added

@@ -1,0 +1,57 @@
+# Text-to-Speech announcement on the Atom
+# =========================================
+# A little Home Assistant card: type any text, press SPEAK, and the Atom says it out loud
+# (via your TTS engine). Works because the device exposes a `media_player: speaker` and the
+# HA TTS engine plays straight to it.
+#
+# Replace entity ids to match your install:
+#   tts.piper                              -> your TTS engine (tts.home_assistant_cloud, tts.google_translate_..., etc.)
+#   media_player.atom_voice_atom_speaker   -> this device's media_player
+#
+# 1) Helper (Settings -> Devices & Services -> Helpers -> Create Helper -> Text), or YAML:
+input_text:
+  atom_announce:
+    name: Atom Announce
+    max: 255
+    icon: mdi:bullhorn
+
+# 2) Script that speaks whatever is in the text box:
+script:
+  atom_say:
+    alias: Atom Say
+    icon: mdi:bullhorn
+    mode: single
+    sequence:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_text.atom_announce') | trim | length > 0 }}"
+            sequence:
+              - service: tts.speak
+                target:
+                  entity_id: tts.piper
+                data:
+                  media_player_entity_id: media_player.atom_voice_atom_speaker
+                  message: "{{ states('input_text.atom_announce') }}"
+
+# 3) Lovelace card (Edit dashboard -> add a Manual card):
+#
+#   type: entities
+#   title: "📢 Announce on Atom"
+#   entities:
+#     - entity: input_text.atom_announce
+#       name: Text to speak
+#     - type: button
+#       name: Speak on Atom
+#       icon: mdi:bullhorn
+#       action_name: SPEAK
+#       tap_action:
+#         action: call-service
+#         service: script.atom_say
+#
+# Notes
+# - For a louder "announcement over music" experience, the firmware also exposes an
+#   `Announce Ducking` switch + `Announce Volume` / `Announce Background` numbers (see the
+#   Westminster clock example) that dip the music while the message plays.
+# - If nothing is heard, make sure Music Assistant is not holding this player's queue
+#   (see docs/voice-assistant-experiment.md — the same bus conflict applies to any playback).
