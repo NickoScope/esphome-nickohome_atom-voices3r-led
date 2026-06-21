@@ -8,7 +8,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com); this proj
 
 ### Added
 - **Wi‑Fi fallback access point for on‑device provisioning/recovery** — the `wifi:` block now
-  defines an `ap:` (SSID **`Atom Voice Setup`**, password from `secrets.yaml` `ap_password`).
+  defines an `ap:` (SSID **`Atom_Strip`**, password from `secrets.yaml` `ap_password`).
   Combined with the existing `captive_portal:`, if the device can't join the configured Wi‑Fi it
   starts its own hotspot; connect from a phone and a captive‑portal page lets you scan and enter a
   new network — no USB reflash needed. Documented in the README (Installation + Troubleshooting),
