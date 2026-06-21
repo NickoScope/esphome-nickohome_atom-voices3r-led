@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.6.0] — 2026-06-21
+
+### Added
+- **Wi‑Fi fallback access point for on‑device provisioning/recovery** — the `wifi:` block now
+  defines an `ap:` (SSID **`Atom Voice Setup`**, password from `secrets.yaml` `ap_password`).
+  Combined with the existing `captive_portal:`, if the device can't join the configured Wi‑Fi it
+  starts its own hotspot; connect from a phone and a captive‑portal page lets you scan and enter a
+  new network — no USB reflash needed. Documented in the README (Installation + Troubleshooting),
+  with an `ap_password` placeholder added to `secrets.yaml.example`.
+
 ## [1.5.0] — 2026-06-21
 
 ### Added

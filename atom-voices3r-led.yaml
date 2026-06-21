@@ -51,6 +51,12 @@ captive_portal:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  # Fallback hotspot: if the configured Wi-Fi can't be joined, the device starts its own AP
+  # "Atom Voice Setup". Connect to it from a phone -> captive_portal opens a web page to scan
+  # and enter a new Wi-Fi network. This is how you change/recover Wi-Fi without reflashing.
+  ap:
+    ssid: "Atom Voice Setup"
+    password: !secret ap_password
 api:
   encryption:
     key: !secret api_encryption_key

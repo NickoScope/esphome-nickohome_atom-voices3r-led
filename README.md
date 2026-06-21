@@ -161,6 +161,16 @@ paste your `api_encryption_key`. After that, update wirelessly:
 esphome run atom-voices3r-led.yaml --device <device-hostname>.local
 ```
 
+### Changing / recovering Wi-Fi (no reflash)
+If the device can't join the configured Wi-Fi (e.g. you moved it, or changed your
+router/password), it falls back to its own access point named **`Atom Voice Setup`**.
+Connect to that AP from a phone or laptop — the standard ESPHome `wifi: ap:` +
+`captive_portal:` combo then pops a web page where you can scan for networks and enter
+new credentials. The device reconnects to the new network with no USB reflash needed.
+
+The AP is password-protected; its password comes from `secrets.yaml` (`ap_password`,
+8+ characters — see [`secrets.yaml.example`](secrets.yaml.example)).
+
 ---
 
 ## 🎛️ Configuration & Usage
@@ -221,6 +231,7 @@ Three non‑obvious things make this device work; full write‑up in
 | `Parent bus is busy` / no sound on play | Expected only if mic and speaker fight for the bus — the auto hand‑off resolves it; ensure you're on this config. |
 | Media player missing in HA | Reload the ESPHome integration after adding entities. |
 | OTA "connection reset" | Weak Wi‑Fi; simply retry the upload. |
+| Device offline after a Wi‑Fi change | It started its fallback AP **`Atom Voice Setup`** — connect to it and re-enter Wi‑Fi via the captive portal (see [Changing / recovering Wi‑Fi](#changing--recovering-wi-fi-no-reflash)). |
 
 ---
 
