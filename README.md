@@ -63,6 +63,16 @@ Shared freely so the next person doesn't lose an evening to it.
   contention.
 - **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders, plus the physical
   top button cycles sensitivity on the device.
+- **On‑device web interface (`web_server`)** — control every setting from a browser at the
+  device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the
+  startup settings below — no Home Assistant required.
+- **Startup Effect** — a `Startup Effect` select picks which effect the strip shows on boot
+  (Clock / Fireplace / Matrix Rain / Terminal / Fireworks Burst / Chaos / TV Simulator /
+  Bell Glow / None), applied in firmware `on_boot` and restored across reboots.
+- **Spoken startup greeting** — an editable `Startup Greeting` text entity (restored, 255
+  chars); Home Assistant speaks it on boot via TTS. See
+  [homeassistant/startup-greeting.yaml](homeassistant/startup-greeting.yaml).
+- **Restart button** — a `Restart` button to reboot the device from the web interface or HA.
 - **100% local** — native HA API with encryption, OTA updates, no cloud dependency.
 
 ### Effects
@@ -171,13 +181,31 @@ new credentials. The device reconnects to the new network with no USB reflash ne
 The AP is password-protected; its password comes from `secrets.yaml` (`ap_password`,
 8+ characters — see [`secrets.yaml.example`](secrets.yaml.example)).
 
+> **Web interface vs. Wi‑Fi setup — what lives where (verified against ESPHome source):**
+> The on‑device **web interface (`web_server`) is reachable by the device IP only while
+> Wi‑Fi is connected** (`http://<device-ip>/`), and it lets you control every entity —
+> but **Wi‑Fi configuration is *not* on that page**. Changing the network is done **only**
+> through the **`Atom_Strip` fallback AP + captive portal**, which comes up **automatically
+> when the device cannot join the configured Wi‑Fi** (e.g. you changed the router or
+> password). There is **no button to force the AP while connected** — `wifi.disable` turns
+> Wi‑Fi fully off (taking the web interface down with it), and Wi‑Fi fields cannot be added
+> to `web_server`. So if `web_server` shows no Wi‑Fi settings, that is expected: when you
+> *need* to change Wi‑Fi, the device is off your network and you reach it via the captive
+> portal instead.
+
 ---
 
 ## 🎛️ Configuration & Usage
 
-In Home Assistant the device exposes:
+Everything below is available both in Home Assistant **and** in the on‑device web interface
+at `http://<device-ip>/` (reachable while the device is on Wi‑Fi). The device exposes:
 
 - `light.strip` — turn on, pick an effect from the dropdown.
+- `select.startup_effect` — which effect the strip shows on boot (applied in firmware, restored).
+- `select.clock_style` — Analog / Digital / Binary for the on‑strip Clock effect.
+- `text.startup_greeting` — editable boot greeting; Home Assistant speaks it on boot via TTS
+  (see [homeassistant/startup-greeting.yaml](homeassistant/startup-greeting.yaml)).
+- `button.restart` — reboot the device from the web interface or HA.
 - `number.mic_sensitivity` — **important**: tune this to your room. Too high pins the
   strip fully on (no swing); start around **30–40 %**. The on‑device button cycles it.
 - `number.active_leds` — how many LEDs are lit (default 30). Set `num_leds` (in the YAML) to
@@ -204,6 +232,12 @@ music on a normal speaker in the room — the mic does the rest.
 Assistant for chimes at :30/:00, the time spoken on the hour, ducking and the Bell Glow
 accompaniment. It adds a `script.westminster_test` you can press to preview an announcement
 and tune the two volume levels without waiting for the next hour.
+
+**Spoken startup greeting (optional):** import
+[homeassistant/startup-greeting.yaml](homeassistant/startup-greeting.yaml) so Home Assistant
+speaks the `Startup Greeting` text via TTS whenever the device boots. The greeting text is
+editable in the web interface / HA and restored across reboots; the **Startup Effect** select
+is applied entirely in firmware (`on_boot`) and needs no automation.
 
 ---
 

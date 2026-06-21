@@ -29,6 +29,10 @@ esphome:
       - sound_level.stop: sound_meter   # mic OFF by default (frees the shared I2S bus)
       - switch.turn_on: spk_enable       # amplifier ON by default
       - lambda: 'id(mic_active) = false;'
+      - light.turn_on:                   # apply the chosen Startup Effect
+          id: led_strip
+          brightness: 70%
+          effect: !lambda 'return id(startup_effect).state;'
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -63,6 +67,15 @@ api:
 ota:
   - platform: esphome
     password: !secret ota_password
+
+# On-device web interface (settings page) at http://<device-ip>/ — shows every control
+# (Active LEDs, Startup Effect, Startup Greeting, Clock Style, effects, volumes). Reachable
+# whenever the device is on Wi-Fi; if Wi-Fi drops, use the "Atom_Strip" fallback AP instead.
+web_server:
+  port: 80
+  version: 3
+  local: true
+  ota: false        # firmware updates stay on the password-protected esphome OTA, not the web page
 
 # Time source for the on-strip clock (from Home Assistant)
 time:
@@ -243,6 +256,43 @@ select:
     initial_option: "Analog"
     restore_value: true
     icon: "mdi:clock-outline"
+  # Effect applied to the strip on boot (see on_boot).
+  - platform: template
+    name: "Startup Effect"
+    id: startup_effect
+    optimistic: true
+    options:
+      - "Clock"
+      - "Fireplace"
+      - "Matrix Rain"
+      - "Terminal"
+      - "Fireworks Burst"
+      - "Chaos"
+      - "TV Simulator"
+      - "Bell Glow"
+      - "None"
+    initial_option: "Clock"
+    restore_value: true
+    icon: "mdi:auto-fix"
+
+# ---------- STARTUP GREETING (Home Assistant speaks this on boot via TTS) ----------
+text:
+  - platform: template
+    name: "Startup Greeting"
+    id: startup_greeting
+    optimistic: true
+    mode: text
+    min_length: 0
+    max_length: 255
+    initial_value: "Hi! I am your personal interactive LED strip! Enjoy!"
+    restore_value: true
+    icon: "mdi:message-text"
+
+# ---------- RESTART BUTTON (shows in the web interface + Home Assistant) ----------
+button:
+  - platform: restart
+    name: "Restart"
+    icon: "mdi:restart"
 
 # ---------- ON-DEVICE BUTTON (G41) -> cycles mic sensitivity ----------
 binary_sensor:

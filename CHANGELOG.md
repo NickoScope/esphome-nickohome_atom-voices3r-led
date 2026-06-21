@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.7.0] — 2026-06-21
+
+### Added
+- **On‑device web interface (`web_server`, v3)** — a settings page at `http://<device-ip>/`
+  (port 80, `local: true`, `ota: false`) that lists and controls every entity (Active LEDs,
+  Startup Effect, Startup Greeting, Clock Style, effects, volumes, Restart). Reachable whenever
+  the device is on Wi‑Fi.
+- **`Startup Effect` select** (`id: startup_effect`; Clock / Fireplace / Matrix Rain / Terminal /
+  Fireworks Burst / Chaos / TV Simulator / Bell Glow / None; default Clock, restored) — the effect
+  applied to the strip on boot, wired into `on_boot` via `light.turn_on` with
+  `effect: !lambda 'return id(startup_effect).state;'`.
+- **Editable `Startup Greeting` text** (`id: startup_greeting`, default
+  `"Hi! I am your personal interactive LED strip! Enjoy!"`, restored, max 255) — shown in the web
+  interface; Home Assistant speaks it on boot via TTS. New example:
+  [homeassistant/startup-greeting.yaml](homeassistant/startup-greeting.yaml).
+- **`Restart` button** (`platform: restart`) — restart the device from the web interface / HA.
+
+### Changed
+- **README Wi‑Fi‑provisioning clarification** (verified against ESPHome source): the `web_server`
+  page is reachable by device IP only while Wi‑Fi is connected and does **not** contain Wi‑Fi
+  settings; Wi‑Fi configuration is available **only** via the `Atom_Strip` fallback AP + captive
+  portal, which comes up automatically when the device can't join the configured network. There is
+  no way to force the AP while connected (`wifi.disable` turns Wi‑Fi fully off) and Wi‑Fi fields
+  cannot be added to `web_server`.
+
 ## [1.6.0] — 2026-06-21
 
 ### Added

@@ -1,0 +1,42 @@
+# Spoken startup greeting
+# =======================
+# The firmware exposes an editable text entity **Startup Greeting** (and a **Startup Effect**
+# select) — both appear in the device's web interface (web_server) and in Home Assistant.
+# The greeting TEXT lives on the device; Home Assistant SPEAKS it on boot via TTS.
+#
+# Entity ids include your device/area prefix — check Developer Tools -> States. Examples:
+#   text.<device>_startup_greeting     -> the editable greeting (default: "Hi! I am your personal
+#                                          interactive LED strip! Enjoy!")
+#   select.<device>_startup_effect      -> the effect applied on boot (handled in firmware on_boot)
+#   media_player.<device>_atom_speaker  -> this device's speaker
+#   tts.piper                           -> your TTS engine
+#
+# Automation: when the device comes online (boots), speak the greeting.
+automation:
+  - alias: "Atom startup greeting"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: text.<device>_startup_greeting   # fires when the device boots (unavailable -> value)
+        from: "unavailable"
+    condition:
+      - condition: template
+        value_template: "{{ states('text.<device>_startup_greeting') not in ['unavailable','unknown',''] }}"
+    action:
+      - delay: { seconds: 6 }          # let the device finish booting (amp on, player ready)
+      # If you use Music Assistant on this player, stop it first so it doesn't hold the I2S bus:
+      - service: media_player.media_stop
+        target: { entity_id: media_player.<device>_atom_speaker_2 }
+      - delay: { seconds: 1 }
+      - service: tts.speak
+        target: { entity_id: tts.piper }
+        data:
+          media_player_entity_id: media_player.<device>_atom_speaker
+          message: "{{ states('text.<device>_startup_greeting') }}"
+
+# Notes
+# - Edit the greeting any time in the device web interface (http://<device-ip>/) or in HA — it is
+#   restored across reboots.
+# - The Startup Effect is applied entirely in firmware (esphome on_boot), no automation needed.
+# - If nothing is heard, make sure Music Assistant is not holding this player's queue
+#   (see docs/voice-assistant-experiment.md — the same I2S-bus rule applies to any playback).
