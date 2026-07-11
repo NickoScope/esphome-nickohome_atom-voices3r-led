@@ -78,6 +78,9 @@ Shared freely so the next person doesn't lose an evening to it.
   chars); Home Assistant speaks it on boot via TTS. See
   [homeassistant/startup-greeting.yaml](homeassistant/startup-greeting.yaml).
 - **Restart button** — a `Restart` button to reboot the device from the web interface or HA.
+- **Diagnostics** — **WiFi Signal** (RSSI in dBm) and **Uptime** sensors (`entity_category:
+  diagnostic`, 60 s) shown in the ⚙️ System group of the on‑device web interface and in Home
+  Assistant, for at‑a‑glance link‑quality and stability checks.
 - **100% local** — native HA API with encryption, OTA updates, no cloud dependency.
 
 ### Effects
@@ -221,6 +224,8 @@ at `http://<device-ip>/` (reachable while the device is on Wi‑Fi). The device 
 - `media_player.atom_speaker` — playback target (also add it to Music Assistant via its
   "Home Assistant" player provider).
 - `sensor.mic_rms` / `sensor.mic_peak` — live mic levels.
+- `sensor.wifi_signal` / `sensor.uptime` — diagnostics (WiFi RSSI in dBm, uptime), in the
+  ⚙️ System group and marked `entity_category: diagnostic`.
 
 **Announcement controls** (used by the Westminster clock, below):
 - `number.announce_volume` — master volume while an announcement plays (loud; default 100 %).

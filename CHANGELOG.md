@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.9.0] — 2026-07-11
+
+### Added
+- **Diagnostic sensors** surfaced in the ⚙️ System group of the on‑device web interface and in
+  Home Assistant (both `entity_category: diagnostic`, 60 s update interval):
+  - **`WiFi Signal`** (`platform: wifi_signal`, `id: wifi_rssi`) — link RSSI in dBm.
+  - **`Uptime`** (`platform: uptime`, `id: dev_uptime`) — time since last boot.
+
 ## [1.8.0] — 2026-07-11
 
 ### Changed

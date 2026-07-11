@@ -410,6 +410,19 @@ sensor:
         - throttle: 200ms
     peak:
       name: "Mic Peak"
+  # ---------- DIAGNOSTICS (WiFi signal + uptime) -> web interface + HA ----------
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: wifi_rssi
+    update_interval: 60s
+    entity_category: diagnostic
+    web_server: { sorting_group_id: grp_system }
+  - platform: uptime
+    name: "Uptime"
+    id: dev_uptime
+    update_interval: 60s
+    entity_category: diagnostic
+    web_server: { sorting_group_id: grp_system }
 
 # ---------- GLOBAL TAIL-OFF ----------
 # Forces LEDs [Active LEDs, num_leds) to black in ANY state - this is what keeps the
