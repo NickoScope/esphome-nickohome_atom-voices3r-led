@@ -37,9 +37,12 @@ Shared freely so the next person doesn't lose an evening to it.
 
 ## ✨ Features
 
-- **Real microphone audio‑reactivity** — 9 sound‑reactive LED effects driven by the
+- **Real microphone audio‑reactivity** — 10 sound‑reactive LED effects driven by the
   on‑board ES8311 mic (it listens to the room; play music on any speaker and the
   strip dances to it for real).
+- **Spectrum analyzer** — a real 512‑point FFT (Hann window, precomputed twiddles, auto‑gain)
+  runs live in the mic handler and drives a 10‑band spectrum display: 10 frequency bands ×
+  6 LEDs = 60 LEDs, each band its own color, bars rising and falling with the music.
 - **TV‑presence simulator** — a non‑reactive effect that mimics the bluish‑white
   flicker of a television; from the street it looks like someone is home watching TV.
 - **Westminster clock** — optional Home Assistant add‑on: the Westminster chimes at :30 and
@@ -63,8 +66,8 @@ Shared freely so the next person doesn't lose an evening to it.
   contention.
 - **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders.
 - **On‑device G41 button** — **short press cycles the strip effect** (Clock → Fireplace → Matrix
-  Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → TV Simulator → Bell Glow →
-  None → …); **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
+  Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → Spectrum → TV Simulator →
+  Bell Glow → None → …); **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
   direction (brighten ⇄ dim). No app needed to change the look or dim the strip.
 - **On‑device web interface (`web_server` v3)** — control every setting from a browser at the
   device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the startup
@@ -72,7 +75,7 @@ Shared freely so the next person doesn't lose an evening to it.
   🎨 Effects & Light / 🕐 Clock / 🔊 Sound / 📢 Announcements / 🚀 Startup / ⚙️ System — instead
   of one flat list.
 - **Startup Effect** — a `Startup Effect` select picks which effect the strip shows on boot
-  (Clock / Fireplace / Matrix Rain / Terminal / Fireworks Burst / Chaos / TV Simulator /
+  (Clock / Fireplace / Matrix Rain / Terminal / Fireworks Burst / Chaos / Spectrum / TV Simulator /
   Bell Glow / None), applied in firmware `on_boot` and restored across reboots.
 - **Spoken startup greeting** — an editable `Startup Greeting` text entity (restored, 255
   chars); Home Assistant speaks it on boot via TTS. See
@@ -92,6 +95,7 @@ Shared freely so the next person doesn't lose an evening to it.
 | Pixels | ✅ | Random colored sparkles, density follows loudness |
 | Matripix | ✅ | Running trail, head colored by loudness |
 | Color Music | ✅ | Flowing rainbow, brightness follows sound |
+| Spectrum | ✅ | 10‑band FFT spectrum analyzer — 10 frequency bands × 6 LEDs, each band its own color |
 | Matrix | ✅ | Green "rain", density follows sound |
 | Fireworks | ✅ | Color bursts on beats |
 | Strobe | ✅ | White flash on beats |

@@ -129,6 +129,66 @@ microphone:
     channel: left            # ES8311 mono ADC outputs on the LEFT slot (default right = silence)
     sample_rate: 48000
     bits_per_sample: 16bit
+    on_data:
+      # Real-time FFT for the "Spectrum" effect. Only runs while that effect is active
+      # (the mic is already gated ON for it by the MIC<->AMP arbiter). Accumulates 512
+      # int16 samples, windows + radix-2 FFT (twiddles precomputed once), folds bins into
+      # 10 log-spaced bands with auto-gain, and stores 0..1 levels into id(spec).
+      - lambda: |-
+          if (id(led_strip).get_effect_name() != "Spectrum") return;
+          static const int N = 512;
+          static int16_t buf[N];
+          static int cnt = 0;
+          static bool ini = false;
+          static float ct[N/2], st[N/2], han[N];
+          static int rev[N];
+          static float agc = 1e-6f;
+          if (!ini) {
+            for (int i = 0; i < N/2; i++) { float a = -6.28318531f * i / N; ct[i] = cosf(a); st[i] = sinf(a); }
+            for (int i = 0; i < N; i++) { int r = 0, y = i; for (int b = 0; b < 9; b++) { r = (r << 1) | (y & 1); y >>= 1; } rev[i] = r; }
+            for (int i = 0; i < N; i++) han[i] = 0.5f * (1.0f - cosf(6.28318531f * i / (N - 1)));
+            ini = true;
+          }
+          for (size_t i = 0; i + 1 < x.size(); i += 2) {
+            if (cnt >= N) break;
+            buf[cnt++] = (int16_t)(x[i] | (x[i+1] << 8));
+          }
+          if (cnt < N) return;
+          cnt = 0;
+          static float re[N], im[N];
+          for (int i = 0; i < N; i++) { re[rev[i]] = (float)buf[i] * han[i]; im[rev[i]] = 0.0f; }
+          for (int len = 2; len <= N; len <<= 1) {
+            int half = len >> 1, step = N / len;
+            for (int i = 0; i < N; i += len) {
+              int k = 0;
+              for (int j = 0; j < half; j++) {
+                float c = ct[k], s = st[k]; k += step;
+                int a = i + j, b = i + j + half;
+                float tr = c * re[b] - s * im[b];
+                float ti = c * im[b] + s * re[b];
+                re[b] = re[a] - tr; im[b] = im[a] - ti;
+                re[a] += tr;        im[a] += ti;
+              }
+            }
+          }
+          static const int edges[11] = {2, 3, 5, 8, 13, 21, 34, 56, 90, 145, 220};
+          float raw[10], fmax = 1e-6f;
+          for (int b = 0; b < 10; b++) {
+            float sum = 0; int c = 0;
+            for (int k = edges[b]; k < edges[b+1] && k < N/2; k++) { sum += sqrtf(re[k]*re[k] + im[k]*im[k]); c++; }
+            raw[b] = c ? sum / c : 0.0f;
+            if (raw[b] > fmax) fmax = raw[b];
+          }
+          if (fmax > agc) agc = fmax; else agc = agc * 0.99f + fmax * 0.01f;
+          if (agc < 1e-6f) agc = 1e-6f;
+          float sn = id(mic_sensitivity).state; if (isnan(sn)) sn = 50.0f;
+          float boost = 0.55f + sn / 100.0f;
+          for (int b = 0; b < 10; b++) {
+            float lv = sqrtf(raw[b] / agc) * boost;
+            if (lv > 1.0f) lv = 1.0f; if (!(lv > 0.0f)) lv = 0.0f;
+            float prev = id(spec)[b];
+            id(spec)[b] = (lv > prev) ? lv : prev * 0.80f + lv * 0.20f;
+          }
 
 speaker:
   - platform: i2s_audio
@@ -295,6 +355,7 @@ select:
       - "Terminal"
       - "Fireworks Burst"
       - "Chaos"
+      - "Spectrum"
       - "TV Simulator"
       - "Bell Glow"
       - "None"
@@ -342,7 +403,7 @@ binary_sensor:
         then:
           - lambda: |-
               static const char *FX[] = {"Clock", "Fireplace", "Matrix Rain", "Terminal",
-                "Fireworks Burst", "Chaos", "VU Meter", "Color Music", "TV Simulator", "Bell Glow", "None"};
+                "Fireworks Burst", "Chaos", "VU Meter", "Color Music", "Spectrum", "TV Simulator", "Bell Glow", "None"};
               static int i = 0;
               int n = sizeof(FX) / sizeof(FX[0]);
               i = (i + 1) % n;
@@ -386,6 +447,11 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'false'
+  # 10 FFT band levels (0..1): written by the mic on_data FFT, read by the "Spectrum" effect
+  - id: spec
+    type: std::array<float, 10>
+    restore_value: no
+    initial_value: '{0,0,0,0,0,0,0,0,0,0}'
 
 sensor:
   - platform: sound_level
@@ -434,7 +500,8 @@ interval:
       - lambda: |-
           auto *al = static_cast<esphome::light::AddressableLight *>(id(led_strip).get_output());
           if (al == nullptr) return;
-          if (id(led_strip).get_effect_name() == "Clock") return;   // Clock owns the whole strip
+          std::string en = id(led_strip).get_effect_name();
+          if (en == "Clock" || en == "Spectrum") return;   // these effects own the whole strip
           int total = al->size();
           float af = id(active_leds).state;
           int act = (isnan(af) || af < 1.0f) ? total : (int) af;
@@ -452,7 +519,7 @@ interval:
       - lambda: |-
           std::string e = id(led_strip).get_effect_name();
           bool reactive = (e=="VU Meter"||e=="Gravimeter"||e=="Gravcenter"||e=="Pixels"||
-                           e=="Matripix"||e=="Color Music"||e=="Matrix"||e=="Fireworks"||e=="Strobe");
+                           e=="Matripix"||e=="Color Music"||e=="Matrix"||e=="Fireworks"||e=="Strobe"||e=="Spectrum");
           // Mic follows the EFFECT only: a reactive effect -> mic ON + amp OFF. Playback is
           // handled by switching to a non-reactive effect (Bell Glow) which turns the mic off.
           id(want_mic) = reactive;
@@ -501,6 +568,26 @@ light:
               } else it[i] = Color(0,0,0);
             }
             for (int i = n; i < N; i++) it[i] = Color(0,0,0);
+
+      - addressable_lambda:
+          name: "Spectrum"
+          update_interval: 33ms
+          lambda: |-
+            // Audio spectrometer: 10 frequency bands x 6 LEDs = 60 LEDs, each band its own
+            // color. Band levels come from the mic on_data FFT (id(spec)). Fixed 60-LED
+            // layout (independent of Active LEDs); the rest of the strip is cleared.
+            const int BANDS = 10, PER = 6;
+            int N = it.size();
+            for (int b = 0; b < BANDS; b++) {
+              float lv = id(spec)[b]; if (!(lv > 0.0f)) lv = 0.0f; if (lv > 1.0f) lv = 1.0f;
+              int lit = (int) roundf(lv * PER);
+              uint8_t hue = (uint8_t)(b * 255 / BANDS);   // 10 distinct colors across the wheel
+              for (int j = 0; j < PER; j++) {
+                int idx = b * PER + j; if (idx >= N) break;
+                it[idx] = (j < lit) ? ESPHSVColor(hue, 255, 255).to_rgb() : Color(0, 0, 0);
+              }
+            }
+            for (int i = BANDS * PER; i < N; i++) it[i] = Color(0, 0, 0);
 
       - addressable_lambda:
           name: "Gravimeter"

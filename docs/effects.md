@@ -15,14 +15,15 @@ All reactive effects are driven by the microphone level (`vu` / `vu_target`, a s
 | 7 | **Matrix** | ✅ | 50 ms | Falling green "code rain"; drop density follows the sound. |
 | 8 | **Fireworks** | ✅ | 33 ms | On a detected beat, a colored burst spawns and fades. |
 | 9 | **Strobe** | ✅ | 25 ms | Whole strip flashes white on beats. |
-| 10 | **TV Simulator** | — | 90 ms | Non‑reactive. Bluish‑white TV glow with random "scenes", bright cuts and warm/dark scenes — looks like a working television from outside. Use it as a presence/occupancy ("away mode") deterrent. |
-| 11 | **Bell Glow** | — | 33 ms | Non‑reactive. Warm‑gold breathing glow that flows along the strip; used as the light accompaniment for the Westminster chimes (Home Assistant enables it while the bells play). Time‑based because the mic is off during speaker playback. |
-| 12 | **Fireplace** | — | 60 ms | Non‑reactive. Flickering fire / fireplace simulation (Fire2012‑style heat model: cool‑down, upward heat diffusion, random sparks at the base, heat‑map colors). |
-| 13 | **Matrix Rain** | — | 60 ms | Non‑reactive. Continuous green "code rain" falling along the strip with white drop heads (always animating, no audio). |
-| 14 | **Terminal** | — | 50 ms | Non‑reactive. A running cursor leaves a fading green trail while random green "characters" blink — like a terminal printing output. |
-| 15 | **Fireworks Burst** | — | 33 ms | Non‑reactive. Random colored bursts spawn and fade across the strip on a timer (the audio "Fireworks" effect without needing a beat). |
-| 16 | **Chaos** | — | 40 ms | Non‑reactive. Every pixel randomly flickers to a new random color and fades — colorful noise. |
-| 17 | **Clock** | — | 50 ms | Non‑reactive, visual‑only. An on‑strip **HH:MM:SS clock** (12‑hour, time read from Home Assistant via the `time` component). The look is chosen by the **`Clock Style`** select — **Analog / Digital / Binary**. This effect **owns the whole strip** (the global tail‑off interval skips it), so `Active LEDs` does not apply while it runs. |
+| 10 | **Spectrum** | ✅ | 33 ms | Real‑time **10‑band FFT spectrum analyzer**. A 512‑point radix‑2 FFT (Hann window, precomputed twiddles) runs in the mic `on_data` handler with auto‑gain; bins fold into 10 log‑spaced bands stored in a `std::array<float,10>` global. Rendered as **10 bands × 6 LEDs = 60 LEDs**, each band a distinct color across the hue wheel; **owns the whole strip** (skipped by the tail‑off interval), so `Active LEDs` does not apply while it runs. |
+| 11 | **TV Simulator** | — | 90 ms | Non‑reactive. Bluish‑white TV glow with random "scenes", bright cuts and warm/dark scenes — looks like a working television from outside. Use it as a presence/occupancy ("away mode") deterrent. |
+| 12 | **Bell Glow** | — | 33 ms | Non‑reactive. Warm‑gold breathing glow that flows along the strip; used as the light accompaniment for the Westminster chimes (Home Assistant enables it while the bells play). Time‑based because the mic is off during speaker playback. |
+| 13 | **Fireplace** | — | 60 ms | Non‑reactive. Flickering fire / fireplace simulation (Fire2012‑style heat model: cool‑down, upward heat diffusion, random sparks at the base, heat‑map colors). |
+| 14 | **Matrix Rain** | — | 60 ms | Non‑reactive. Continuous green "code rain" falling along the strip with white drop heads (always animating, no audio). |
+| 15 | **Terminal** | — | 50 ms | Non‑reactive. A running cursor leaves a fading green trail while random green "characters" blink — like a terminal printing output. |
+| 16 | **Fireworks Burst** | — | 33 ms | Non‑reactive. Random colored bursts spawn and fade across the strip on a timer (the audio "Fireworks" effect without needing a beat). |
+| 17 | **Chaos** | — | 40 ms | Non‑reactive. Every pixel randomly flickers to a new random color and fades — colorful noise. |
+| 18 | **Clock** | — | 50 ms | Non‑reactive, visual‑only. An on‑strip **HH:MM:SS clock** (12‑hour, time read from Home Assistant via the `time` component). The look is chosen by the **`Clock Style`** select — **Analog / Digital / Binary**. This effect **owns the whole strip** (the global tail‑off interval skips it), so `Active LEDs` does not apply while it runs. |
 
 ### Clock styles (the `Clock Style` select)
 
@@ -30,8 +31,8 @@ All reactive effects are driven by the microphone level (`vu` / `vu_target`, a s
 - **Digital** — 6 groups of 10 LEDs (`H H : M M : S S`); each digit 0–9 is shown as a bar — **red hours / green minutes / blue seconds**.
 - **Binary** — BCD bit columns per field (compact, geeky); same red/green/blue color coding for hours / minutes / seconds.
 
-**Mic note:** the reactive effects (rows 1–9) need the microphone; selecting one turns the mic
-ON (and the amplifier OFF). The non‑reactive effects (rows 10–17, including **Clock**) keep the
+**Mic note:** the reactive effects (rows 1–10) need the microphone; selecting one turns the mic
+ON (and the amplifier OFF). The non‑reactive effects (rows 11–18, including **Clock**) keep the
 mic OFF / amplifier ON, since they don't need audio. See [architecture.md](architecture.md) for
 the mic↔amp arbiter.
 

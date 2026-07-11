@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.10.0] — 2026-07-12
+
+### Added
+- **Spectrum audio‑reactive LED effect** — a real 10‑band FFT spectrum analyzer driven by the
+  on‑board mic:
+  - **512‑point radix‑2 FFT** computed live in the microphone `on_data` handler — Hann window,
+    twiddle factors and bit‑reversal table precomputed once, with an auto‑gain (AGC) envelope.
+    The FFT runs only while the `Spectrum` effect is the active effect. Its output is stored as
+    10 log‑spaced band levels (0..1) in a new `std::array<float,10>` global (`id: spec`).
+  - **`Spectrum` `addressable_lambda` effect** (33 ms) renders **10 frequency bands × 6 LEDs =
+    60 LEDs**, each band a distinct color across the hue wheel; bar height per band tracks its
+    level. Like `Clock`, it **owns the whole strip** (skipped by the tail‑off interval) and
+    clears LEDs beyond the 60‑LED display.
+  - Integrated into the **mic ↔ amp arbiter** and **tail‑off exemption** (mic ON, strip fully
+    owned while active), the **G41 button FX cycle** (after Color Music, before TV Simulator),
+    and the **`Startup Effect`** select.
+  - Brings the reactive‑effect count to **10**.
+
 ## [1.9.0] — 2026-07-11
 
 ### Added
