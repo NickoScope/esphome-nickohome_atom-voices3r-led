@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.8.0] — 2026-07-11
+
+### Changed
+- **G41 on‑device button reassigned** (was: cycle mic sensitivity):
+  - **Short press** (≤ 0.8 s) now **cycles the strip effect** — Clock → Fireplace → Matrix Rain →
+    Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → TV Simulator → Bell Glow → None →
+    (back to Clock), via an `on_multi_click` handler and `light.turn_on` with `set_effect`.
+  - **Long hold** (≥ 1 s) **ramps the strip brightness** while the button is held (`light.dim_relative`
+    in a `while` loop); each new hold reverses direction (brighten ⇄ dim), tracked by a new
+    `dim_dir` global. Mic sensitivity remains adjustable from the `Mic Sensitivity` slider (web/HA).
+- **On‑device web interface (`web_server` v3) organized into named groups** via `sorting_groups`:
+  🎨 Effects & Light / 🕐 Clock / 🔊 Sound / 📢 Announcements / 🚀 Startup / ⚙️ System. Every control
+  is now assigned to its section (`web_server: { sorting_group_id: … }`) instead of one flat list.
+
 ## [1.7.0] — 2026-06-21
 
 ### Added

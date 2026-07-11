@@ -76,6 +76,25 @@ web_server:
   version: 3
   local: true
   ota: false        # firmware updates stay on the password-protected esphome OTA, not the web page
+  sorting_groups:
+    - id: grp_effects
+      name: "🎨 Effects & Light"
+      sorting_weight: 10
+    - id: grp_clock
+      name: "🕐 Clock"
+      sorting_weight: 20
+    - id: grp_sound
+      name: "🔊 Sound"
+      sorting_weight: 30
+    - id: grp_announce
+      name: "📢 Announcements"
+      sorting_weight: 40
+    - id: grp_startup
+      name: "🚀 Startup"
+      sorting_weight: 50
+    - id: grp_system
+      name: "⚙️ System"
+      sorting_weight: 60
 
 # Time source for the on-strip clock (from Home Assistant)
 time:
@@ -158,6 +177,7 @@ switch:
   - platform: template
     name: "Announce Ducking"
     id: announce_ducking
+    web_server: { sorting_group_id: grp_announce }
     optimistic: true
     restore_mode: DISABLED
     icon: "mdi:volume-mute"
@@ -181,6 +201,7 @@ number:
   - platform: template
     name: "Mic Sensitivity"
     id: mic_sensitivity
+    web_server: { sorting_group_id: grp_sound }
     optimistic: true
     min_value: 0
     max_value: 100
@@ -192,6 +213,7 @@ number:
   - platform: template
     name: "Speaker Volume"
     id: speaker_volume
+    web_server: { sorting_group_id: grp_sound }
     optimistic: true
     min_value: 0
     max_value: 100
@@ -208,6 +230,7 @@ number:
   - platform: template
     name: "Active LEDs"
     id: active_leds
+    web_server: { sorting_group_id: grp_effects }
     optimistic: true
     min_value: 1
     max_value: 120
@@ -221,6 +244,7 @@ number:
   - platform: template
     name: "Announce Volume"
     id: announce_volume
+    web_server: { sorting_group_id: grp_announce }
     optimistic: true
     min_value: 10
     max_value: 100
@@ -234,6 +258,7 @@ number:
   - platform: template
     name: "Announce Background"
     id: announce_bg
+    web_server: { sorting_group_id: grp_announce }
     optimistic: true
     min_value: 0
     max_value: 100
@@ -248,6 +273,7 @@ select:
   - platform: template
     name: "Clock Style"
     id: clock_style
+    web_server: { sorting_group_id: grp_clock }
     optimistic: true
     options:
       - "Analog"
@@ -260,6 +286,7 @@ select:
   - platform: template
     name: "Startup Effect"
     id: startup_effect
+    web_server: { sorting_group_id: grp_startup }
     optimistic: true
     options:
       - "Clock"
@@ -280,6 +307,7 @@ text:
   - platform: template
     name: "Startup Greeting"
     id: startup_greeting
+    web_server: { sorting_group_id: grp_startup }
     optimistic: true
     mode: text
     min_length: 0
@@ -293,6 +321,7 @@ button:
   - platform: restart
     name: "Restart"
     icon: "mdi:restart"
+    web_server: { sorting_group_id: grp_system }
 
 # ---------- ON-DEVICE BUTTON (G41) -> cycles mic sensitivity ----------
 binary_sensor:
@@ -304,13 +333,42 @@ binary_sensor:
         pullup: true
       inverted: true
     name: "Atom Button"
-    on_press:
-      - number.increment:
-          id: mic_sensitivity
-          cycle: true
+    id: atom_button
+    # Short press (<=0.8s) -> next strip effect. Long hold (>=1s) -> smoothly ramp the strip
+    # brightness while held; each new hold reverses direction (brighten / dim).
+    on_multi_click:
+      - timing:
+          - ON for at most 0.8s
+        then:
+          - lambda: |-
+              static const char *FX[] = {"Clock", "Fireplace", "Matrix Rain", "Terminal",
+                "Fireworks Burst", "Chaos", "VU Meter", "Color Music", "TV Simulator", "Bell Glow", "None"};
+              static int i = 0;
+              int n = sizeof(FX) / sizeof(FX[0]);
+              i = (i + 1) % n;
+              auto call = id(led_strip).turn_on();
+              call.set_effect(FX[i]);
+              call.perform();
+      - timing:
+          - ON for at least 1s
+        then:
+          - while:
+              condition:
+                binary_sensor.is_on: atom_button
+              then:
+                - light.dim_relative:
+                    id: led_strip
+                    relative_brightness: !lambda "return id(dim_dir) * 0.05f;"
+                    transition_length: 0.1s
+                - delay: 0.1s
+          - lambda: "id(dim_dir) = -id(dim_dir);"
 
 # ---------- MIC LEVEL ----------
 globals:
+  - id: dim_dir             # brightness ramp direction for the button long-hold (+1 up / -1 down)
+    type: float
+    restore_value: no
+    initial_value: '1.0'
   - id: vu_target
     type: float
     restore_value: no
@@ -408,6 +466,7 @@ light:
   - platform: esp32_rmt_led_strip
     id: led_strip
     name: "Strip"
+    web_server: { sorting_group_id: grp_effects }
     pin: ${led_data_pin}
     num_leds: ${num_leds}
     chipset: WS2812

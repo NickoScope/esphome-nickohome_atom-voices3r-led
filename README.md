@@ -61,11 +61,16 @@ Shared freely so the next person doesn't lose an evening to it.
   **OFF by default** (amplifier ON) and turns ON only while an audio‑reactive effect is the
   active effect (which also frees the bus for clean media playback). No more mic/speaker
   contention.
-- **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders, plus the physical
-  top button cycles sensitivity on the device.
-- **On‑device web interface (`web_server`)** — control every setting from a browser at the
-  device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the
-  startup settings below — no Home Assistant required.
+- **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders.
+- **On‑device G41 button** — **short press cycles the strip effect** (Clock → Fireplace → Matrix
+  Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → TV Simulator → Bell Glow →
+  None → …); **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
+  direction (brighten ⇄ dim). No app needed to change the look or dim the strip.
+- **On‑device web interface (`web_server` v3)** — control every setting from a browser at the
+  device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the startup
+  settings below — no Home Assistant required. Controls are organized into named groups —
+  🎨 Effects & Light / 🕐 Clock / 🔊 Sound / 📢 Announcements / 🚀 Startup / ⚙️ System — instead
+  of one flat list.
 - **Startup Effect** — a `Startup Effect` select picks which effect the strip shows on boot
   (Clock / Fireplace / Matrix Rain / Terminal / Fireworks Burst / Chaos / TV Simulator /
   Bell Glow / None), applied in firmware `on_boot` and restored across reboots.
