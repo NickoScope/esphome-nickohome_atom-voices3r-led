@@ -127,7 +127,7 @@ microphone:
     i2s_din_pin: GPIO4
     adc_type: external
     channel: left            # ES8311 mono ADC outputs on the LEFT slot (default right = silence)
-    sample_rate: 48000
+    sample_rate: 16000       # voice_assistant requires 16 kHz mic; speaker stays 48 kHz (used exclusively on the shared bus)
     bits_per_sample: 16bit
     on_data:
       # Real-time FFT for the "Spectrum" effect. Only runs while that effect is active
@@ -222,6 +222,40 @@ media_player:
       - lambda: 'id(mic_active) = false; id(vu) = 0; id(vu_target) = 0;'
     # on_idle / on_pause intentionally omitted: the MIC<->AMP arbiter interval restores the
     # mic (only when an audio-reactive effect is active) once the player returns to idle.
+
+# ---------- VOICE ASSISTANT (push-to-talk: TRIPLE-click the big button) ----------
+# No wake word -> the mic stays free for audio-reactive effects the rest of the time.
+# A triple-click starts one conversation: the mic is handed to Assist for the turn (the
+# arbiter backs off via voice_active), the TTS reply plays through the speaker media_player,
+# then on_end releases the mic back to the arbiter. Half-duplex turn-taking is handled by
+# the voice_assistant state machine (it stops the mic before playing the response).
+voice_assistant:
+  id: va
+  microphone: i2s_mic
+  media_player: speaker_media_player     # TTS reply plays through the existing speaker chain
+  use_wake_word: false
+  on_start:
+    - lambda: 'id(voice_active) = true;'
+    - sound_level.stop: sound_meter       # release the mic from the effects arbiter
+    - switch.turn_on: spk_enable          # amp on so the reply is audible
+    - lambda: 'id(mic_active) = false;'
+  on_end:
+    # RUN_END fires when the reply is only ENQUEUED (still playing). Wait for the spoken answer
+    # to actually finish before releasing the mic, else the arbiter (with a reactive effect
+    # active) would media_player.stop mid-reply and cut it off.
+    - wait_until:
+        condition:
+          or:
+            - media_player.is_playing: speaker_media_player
+            - media_player.is_announcing: speaker_media_player
+        timeout: 3s
+    - wait_until:
+        condition:
+          media_player.is_idle: speaker_media_player
+        timeout: 20s
+    - lambda: 'id(voice_active) = false;'
+  on_error:
+    - lambda: 'id(voice_active) = false;'
 
 # ---------- AMPLIFIER ENABLE ----------
 switch:
@@ -395,12 +429,13 @@ binary_sensor:
       inverted: true
     name: "Atom Button"
     id: atom_button
-    # 1 click (<=0.6s) -> next strip effect. 2 clicks -> play/pause NickoScope32 in Music Assistant.
-    # Long hold (>=1s) -> smoothly ramp the strip brightness; each new hold reverses direction.
+    # 1 click -> next effect. 2 clicks -> play/pause NickoScope32 (MA). 3 clicks -> push-to-talk
+    # voice. Long hold (>=1s) -> ramp strip brightness (each hold reverses direction).
+    # 1/2-click fire ~0.4s after release (waiting to rule out a longer click sequence).
     on_multi_click:
-      - timing:                        # single click -> next effect (waits ~0.3s to rule out a double)
+      - timing:                        # 1 click -> next effect
           - ON for at most 0.6s
-          - OFF for at least 0.3s
+          - OFF for at least 0.4s
         then:
           - lambda: |-
               static const char *FX[] = {"Clock", "Fireplace", "Matrix Rain", "Terminal",
@@ -411,15 +446,50 @@ binary_sensor:
               auto call = id(led_strip).turn_on();
               call.set_effect(FX[i]);
               call.perform();
-      - timing:                        # double click -> play/pause the NickoScope32 MA player
+      - timing:                        # 2 clicks -> play/pause the NickoScope32 MA player
           - ON for at most 0.6s
-          - OFF for at most 0.3s
+          - OFF for at most 0.4s
           - ON for at most 0.6s
+          - OFF for at least 0.4s
         then:
           - homeassistant.action:
               action: media_player.media_play_pause
               data:
                 entity_id: media_player.nickoscope32
+      - timing:                        # 3 clicks -> start a push-to-talk voice conversation
+          - ON for at most 0.6s
+          - OFF for at most 0.4s
+          - ON for at most 0.6s
+          - OFF for at most 0.4s
+          - ON for at most 0.6s
+        then:
+          # Free the mic from the effects path BEFORE Assist grabs it, else the STT stream
+          # starts while sound_level still owns the I2S RX channel -> stt-stream-failed.
+          - lambda: 'id(voice_active) = true;'   # arbiter backs off immediately
+          - sound_level.stop: sound_meter
+          - lambda: 'id(mic_active) = false;'
+          - switch.turn_on: spk_enable           # amp on for the spoken prompt + reply
+          # Spoken activation prompt via HA TTS (Piper). Wait until it FINISHES before opening
+          # the mic — half-duplex bus: the prompt (TX) and the recording (RX) can't overlap.
+          - homeassistant.action:
+              action: tts.speak
+              data:
+                entity_id: tts.piper
+                media_player_entity_id: media_player.atom_voice_atom_speaker
+                message: "Голосовой ассистент активирован, говорите"
+          - wait_until:
+              condition:
+                or:
+                  - media_player.is_playing: speaker_media_player
+                  - media_player.is_announcing: speaker_media_player
+              timeout: 6s
+          - wait_until:
+              condition:
+                media_player.is_idle: speaker_media_player
+              timeout: 12s
+          - delay: 250ms                         # let I2S TX fully release before mic RX
+          - voice_assistant.start:
+              silence_detection: true
       - timing:
           - ON for at least 1s
         then:
@@ -454,6 +524,11 @@ globals:
     restore_value: no
     initial_value: 'false'
   - id: want_mic
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  # true while a push-to-talk voice conversation owns the mic -> the arbiter backs off
+  - id: voice_active
     type: bool
     restore_value: no
     initial_value: 'false'
@@ -532,7 +607,7 @@ interval:
                            e=="Matripix"||e=="Color Music"||e=="Matrix"||e=="Fireworks"||e=="Strobe"||e=="Spectrum");
           // Mic follows the EFFECT only: a reactive effect -> mic ON + amp OFF. Playback is
           // handled by switching to a non-reactive effect (Bell Glow) which turns the mic off.
-          id(want_mic) = reactive;
+          id(want_mic) = reactive && !id(voice_active);   // voice owns the mic while active
       - if:
           condition:
             lambda: 'return id(want_mic) && !id(mic_active);'

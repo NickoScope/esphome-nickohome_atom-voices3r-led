@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.12.0] — 2026-07-18
+
+### Added
+- **Push‑to‑talk voice assistant (triple‑click the G41 big button)** — a new
+  `voice_assistant:` component (no wake word) hands the on‑board mic to Home Assistant Assist for
+  one conversation turn, then plays the TTS reply through the speaker `media_player`. The mic stays
+  free for the audio‑reactive effects the rest of the time.
+- **Spoken activation prompt** — on triple‑click the device speaks
+  *«Голосовой ассистент активирован, говорите»* via HA TTS (Piper) and **waits for it to finish**
+  before opening the mic (half‑duplex I2S: the prompt TX and the recording RX can't overlap).
+- **`voice_active` global + arbiter back‑off** — while a voice turn owns the mic the MIC↔AMP
+  arbiter stands down; `on_end` waits for the spoken reply to actually finish (not just enqueue)
+  before releasing the mic, so a reactive effect can't `media_player.stop` mid‑reply.
+
+### Changed
+- **Big‑button gestures are now 1 / 2 / 3‑click + long‑hold** — the new triple‑click joins
+  1‑click = next effect, 2‑click = play/pause NickoScope32 (Music Assistant), long‑hold =
+  brightness ramp. All four are disambiguated with trailing‑OFF timing (single/double tails widened
+  to `OFF for at least 0.4s`).
+- **Microphone sample rate 48 kHz → 16 kHz** — `voice_assistant` requires a 16 kHz mic; the
+  speaker stays at 48 kHz. The mixed rates coexist on the exclusively‑used shared bus and the mic
+  was re‑verified working for the effects and Spectrum analyzer.
+
 ## [1.11.0] — 2026-07-18
 
 ### Added

@@ -65,11 +65,17 @@ Shared freely so the next person doesn't lose an evening to it.
   active effect (which also frees the bus for clean media playback). No more mic/speaker
   contention.
 - **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders.
-- **On‑device G41 button** — **single click cycles the strip effect** (Clock → Fireplace → Matrix
-  Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → Spectrum → TV Simulator →
-  Bell Glow → None → …); **double click toggles play/pause** on the `NickoScope32` Music Assistant
-  media player; **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
-  direction (brighten ⇄ dim). No app needed to change the look, control playback, or dim the strip.
+- **Push‑to‑talk voice assistant** — **triple‑click** the G41 button to start one Home Assistant
+  Assist conversation (push‑to‑talk, **no wake word**): the device speaks an activation prompt, opens
+  the mic for your request, and plays the spoken reply through the built‑in speaker. See
+  [Voice assistant](#voice-assistant-push-to-talk).
+- **On‑device G41 button (four gestures)** — **single click cycles the strip effect** (Clock →
+  Fireplace → Matrix Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → Spectrum →
+  TV Simulator → Bell Glow → None → …); **double click toggles play/pause** on the `NickoScope32`
+  Music Assistant media player; **triple click starts a push‑to‑talk voice conversation**;
+  **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing direction
+  (brighten ⇄ dim). All four are disambiguated by trailing‑OFF timing — no app needed to change the
+  look, control playback, talk to Assist, or dim the strip.
 - **On‑device web interface (`web_server` v3)** — control every setting from a browser at the
   device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the startup
   settings below — no Home Assistant required. Controls are organized into named groups —
@@ -291,15 +297,29 @@ Three non‑obvious things make this device work; full write‑up in
   "react to my media player" needs an external FFT sender).
 - HA blueprint: auto‑enable **TV Simulator** when away + after dark.
 
-### Voice assistant (experimental — not shipped)
+<a id="voice-assistant-push-to-talk"></a>
+### Voice assistant (push‑to‑talk)
 
-I got a full **Home Assistant Voice (Assist) satellite** working end‑to‑end on this same board
-(on‑device "Okay Nabu" wake word → Whisper STT → conversation agent → Piper TTS), but it is **not**
-in the released firmware: a **Music Assistant auto‑resuming queue claims the half‑duplex I²S bus**
-(`Parent bus is busy`), so the spoken reply can't reach the speaker. It's an honest experiment, not a
-dead end — the full write‑up, what worked, and an **open question inviting help** are in
-[docs/voice-assistant-experiment.md](docs/voice-assistant-experiment.md). If you've shipped an
-EchoS3R/Atom satellite alongside Music Assistant, I'd love to hear how you avoided the bus war.
+**Triple‑click** the G41 button to talk to Home Assistant Assist. It runs **push‑to‑talk, with no
+wake word**, which sidesteps the half‑duplex I²S bus war that blocked always‑listening operation
+(see the experiment note below): the mic is only handed to Assist for a single turn, so it never
+fights the audio‑reactive effects or Music Assistant playback.
+
+One turn goes: triple‑click → the device speaks **«Голосовой ассистент активирован, говорите»**
+(HA TTS / Piper) and waits for the prompt to finish → the mic opens (switched to **16 kHz**, which
+`voice_assistant` requires; the speaker stays at 48 kHz) → you speak → STT → conversation agent →
+the spoken reply plays through the speaker `media_player`, and only then is the mic released back to
+the effects arbiter (so a reactive effect can't cut the reply off).
+
+> **Reliable speech‑to‑text needs a solid link.** Because the audio is streamed to HA for STT, a
+> weak connection drops words. Aim for **Wi‑Fi ≥ −70 dBm** at the device (check the **WiFi Signal**
+> diagnostic sensor); move the device or an AP closer if it reads weaker.
+
+The earlier always‑listening **Assist satellite** experiment (on‑device "Okay Nabu" wake word →
+Whisper → Piper) is still documented for the curious — it hit a **Music Assistant auto‑resuming
+queue claiming the half‑duplex I²S bus** (`Parent bus is busy`) so the reply couldn't reach the
+speaker. The full write‑up and an **open question inviting help** are in
+[docs/voice-assistant-experiment.md](docs/voice-assistant-experiment.md).
 
 ---
 

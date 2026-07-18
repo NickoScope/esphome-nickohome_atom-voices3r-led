@@ -1,4 +1,9 @@
-# Voice Assistant experiment — and why it is not in the shipped firmware
+# Voice Assistant experiment — and why the *always-listening* satellite is not in the shipped firmware
+
+> **Update (v1.12.0):** a **push-to-talk** voice assistant *did* ship — triple-click the G41 button
+> to run one Assist turn (no wake word), which sidesteps the bus conflict below by only handing the
+> mic to Assist for a single turn. See the README's *Voice assistant (push-to-talk)* section. This
+> note is about the harder **always-listening wake-word satellite**, which remains unsolved.
 
 We tried turning this board into a full **Home Assistant Voice (Assist) satellite**: on-device
 wake word (`micro_wake_word`) → HA Assist pipeline (Whisper STT → a conversation agent → Piper TTS),
