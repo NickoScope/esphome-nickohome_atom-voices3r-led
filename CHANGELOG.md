@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [1.11.0] — 2026-07-18
+
+### Added
+- **G41 big‑button double‑click → media play/pause** — a second `on_multi_click` gesture calls
+  `media_player.media_play_pause` on `media_player.nickoscope32` (the **NickoScope32** player in
+  Music Assistant), so playback can be toggled from the device with no app.
+
+### Changed
+- **Single‑click effect cycle now waits out a possible double‑click** — the single‑click timing
+  gained an `OFF for at least 0.3s` tail (and tightened to `ON for at most 0.6s`) to
+  disambiguate it from the new double‑click. Long‑hold (≥ 1 s) brightness ramp is unchanged.
+  All three gestures verified conflict‑free on hardware.
+
 ## [1.10.0] — 2026-07-12
 
 ### Added

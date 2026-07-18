@@ -395,11 +395,12 @@ binary_sensor:
       inverted: true
     name: "Atom Button"
     id: atom_button
-    # Short press (<=0.8s) -> next strip effect. Long hold (>=1s) -> smoothly ramp the strip
-    # brightness while held; each new hold reverses direction (brighten / dim).
+    # 1 click (<=0.6s) -> next strip effect. 2 clicks -> play/pause NickoScope32 in Music Assistant.
+    # Long hold (>=1s) -> smoothly ramp the strip brightness; each new hold reverses direction.
     on_multi_click:
-      - timing:
-          - ON for at most 0.8s
+      - timing:                        # single click -> next effect (waits ~0.3s to rule out a double)
+          - ON for at most 0.6s
+          - OFF for at least 0.3s
         then:
           - lambda: |-
               static const char *FX[] = {"Clock", "Fireplace", "Matrix Rain", "Terminal",
@@ -410,6 +411,15 @@ binary_sensor:
               auto call = id(led_strip).turn_on();
               call.set_effect(FX[i]);
               call.perform();
+      - timing:                        # double click -> play/pause the NickoScope32 MA player
+          - ON for at most 0.6s
+          - OFF for at most 0.3s
+          - ON for at most 0.6s
+        then:
+          - homeassistant.action:
+              action: media_player.media_play_pause
+              data:
+                entity_id: media_player.nickoscope32
       - timing:
           - ON for at least 1s
         then:

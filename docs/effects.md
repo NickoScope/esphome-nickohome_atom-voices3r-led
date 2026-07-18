@@ -42,7 +42,8 @@ the mic↔amp arbiter.
   quieter sounds, but set it too high and everything saturates to full‑on (no swing). A good
   starting point for a normal room is **~30–40 %**. Adjust it from the `Mic Sensitivity` slider
   (web interface / Home Assistant). *(As of v1.8.0 the on‑device G41 button no longer changes
-  sensitivity — short press cycles the strip effect, long hold ramps brightness.)*
+  sensitivity — single click cycles the strip effect, double click toggles play/pause on the
+  NickoScope32 Music Assistant player, long hold ramps brightness.)*
 - **`Active LEDs`** sets how many LEDs animate. `num_leds` (in the YAML) must be your strip's
   **physical** length so every LED is driven; each effect lights `[0, active)` and forces the
   tail `[active, num_leds)` off every frame.

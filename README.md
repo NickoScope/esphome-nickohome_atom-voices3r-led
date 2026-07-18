@@ -65,10 +65,11 @@ Shared freely so the next person doesn't lose an evening to it.
   active effect (which also frees the bus for clean media playback). No more mic/speaker
   contention.
 - **Live HA controls** — `Mic Sensitivity` and `Speaker Volume` sliders.
-- **On‑device G41 button** — **short press cycles the strip effect** (Clock → Fireplace → Matrix
+- **On‑device G41 button** — **single click cycles the strip effect** (Clock → Fireplace → Matrix
   Rain → Terminal → Fireworks Burst → Chaos → VU Meter → Color Music → Spectrum → TV Simulator →
-  Bell Glow → None → …); **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
-  direction (brighten ⇄ dim). No app needed to change the look or dim the strip.
+  Bell Glow → None → …); **double click toggles play/pause** on the `NickoScope32` Music Assistant
+  media player; **long hold (≥ 1 s) ramps the strip brightness** while held, each new hold reversing
+  direction (brighten ⇄ dim). No app needed to change the look, control playback, or dim the strip.
 - **On‑device web interface (`web_server` v3)** — control every setting from a browser at the
   device IP (`http://<device-ip>/`): effects, Active LEDs, volumes, Clock Style and the startup
   settings below — no Home Assistant required. Controls are organized into named groups —
