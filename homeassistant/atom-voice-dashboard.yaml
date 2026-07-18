@@ -1,0 +1,419 @@
+# ==========================================================================
+#  Atom Voice — Home Assistant Lovelace dashboard (storage export)
+#  Device: M5Stack Atom VoiceS3R  ·  ESP32-S3  ·  esphome-atom-voices3r-led
+# --------------------------------------------------------------------------
+#  WHAT: full YAML of the `atom-voice` storage dashboard (7 sections:
+#        Свет/эффекты, Часы, Звук, Голос/медиа, Диагностика, Быстрые
+#        действия, Медиа).
+#  HOW TO USE (re-import): Settings -> Dashboards -> Add dashboard ->
+#        New dashboard -> open it -> 3-dot menu -> "Edit dashboard" ->
+#        3-dot menu -> "Raw configuration editor" -> paste the block
+#        below (everything under `views:`).
+#  DEPENDS ON: entities of the Atom Voice ESPHome node + the companion
+#        helpers/scripts in atom-voice-package.yaml (media section).
+#  Exported from HA via WebSocket lovelace/config. No secrets/tokens.
+# ==========================================================================
+
+views:
+- title: Atom Voice
+  path: main
+  type: sections
+  icon: mdi:led-strip-variant
+  max_columns: 3
+  header:
+    layout: responsive
+    badges_position: bottom
+    card:
+      type: markdown
+      content: |-
+        # 🎙️ Atom Voice
+        ESP32-S3 · LED-лента + голосовой сателлит + медиаплеер
+  badges:
+  - type: entity
+    entity: sensor.atom_voice_wifi_signal
+    show_state: true
+    name: WiFi
+    color: green
+  - type: entity
+    entity: media_player.atom_voice_atom_speaker
+    show_state: true
+    name: Плеер
+  - type: entity
+    entity: assist_satellite.atom_voice_assist_satellite
+    show_state: true
+    name: Assist
+  - type: entity
+    entity: binary_sensor.atom_voice_atom_button
+    show_state: true
+    name: Кнопка
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Свет и эффекты
+      icon: mdi:palette
+    - type: tile
+      entity: light.atom_voice_strip
+      name: Лента
+      features_position: bottom
+      features:
+      - type: light-brightness
+      grid_options:
+        columns: full
+    - type: heading
+      heading: Быстрые эффекты
+      heading_style: subtitle
+      icon: mdi:auto-fix
+    - type: grid
+      columns: 3
+      square: false
+      grid_options:
+        columns: full
+      cards:
+      - type: button
+        name: Spectrum
+        icon: mdi:chart-bar
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: Spectrum
+      - type: button
+        name: VU Meter
+        icon: mdi:sine-wave
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: VU Meter
+      - type: button
+        name: Fireplace
+        icon: mdi:fireplace
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: Fireplace
+      - type: button
+        name: Matrix Rain
+        icon: mdi:matrix
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: Matrix Rain
+      - type: button
+        name: Fireworks
+        icon: mdi:firework
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: Fireworks Burst
+      - type: button
+        name: Clock
+        icon: mdi:clock-digital
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            effect: Clock
+      - type: button
+        name: Выкл
+        icon: mdi:led-strip-variant-off
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_off
+          target:
+            entity_id: light.atom_voice_strip
+    - type: tile
+      entity: number.atom_voice_active_leds
+      name: Активные LED
+      icon: mdi:led-on
+      features:
+      - type: numeric-input
+    - type: tile
+      entity: select.atom_voice_startup_effect
+      name: Эффект при старте
+      icon: mdi:power
+      features:
+      - type: select-options
+  - type: grid
+    cards:
+    - type: heading
+      heading: Часы
+      icon: mdi:clock-outline
+    - type: tile
+      entity: select.atom_voice_clock_style
+      name: Стиль часов
+      icon: mdi:clock-time-four-outline
+      features:
+      - type: select-options
+    - type: button
+      name: Включить часы
+      icon: mdi:clock-digital
+      show_state: false
+      tap_action:
+        action: perform-action
+        perform_action: light.turn_on
+        target:
+          entity_id: light.atom_voice_strip
+        data:
+          effect: Clock
+  - type: grid
+    cards:
+    - type: heading
+      heading: Звук
+      icon: mdi:volume-high
+    - type: tile
+      entity: number.atom_voice_speaker_volume
+      name: Громкость динамика
+      icon: mdi:volume-high
+      features:
+      - type: numeric-input
+    - type: tile
+      entity: number.atom_voice_announce_volume
+      name: Громкость оповещений
+      icon: mdi:bullhorn
+      features:
+      - type: numeric-input
+    - type: tile
+      entity: number.atom_voice_announce_background
+      name: Фон оповещений
+      icon: mdi:music-note
+      features:
+      - type: numeric-input
+    - type: tile
+      entity: number.atom_voice_mic_sensitivity
+      name: Чувствит. микрофона
+      icon: mdi:microphone-settings
+      features:
+      - type: numeric-input
+    - type: tile
+      entity: switch.atom_voice_announce_ducking
+      name: Приглушение (ducking)
+      icon: mdi:volume-minus
+      features:
+      - type: toggle
+  - type: grid
+    cards:
+    - type: heading
+      heading: Голос и медиа
+      icon: mdi:microphone-message
+    - type: tile
+      entity: media_player.atom_voice_atom_speaker
+      name: Динамик Atom
+      grid_options:
+        columns: full
+      features_position: bottom
+      features:
+      - type: media-player-playback
+      - type: media-player-volume-slider
+    - type: tile
+      entity: assist_satellite.atom_voice_assist_satellite
+      name: Assist сателлит
+      icon: mdi:account-voice
+    - type: tile
+      entity: select.atom_voice_assistant
+      name: Голосовой конвейер
+      icon: mdi:cog-transfer
+      features:
+      - type: select-options
+    - type: tile
+      entity: binary_sensor.atom_voice_atom_button
+      name: Кнопка Atom
+      icon: mdi:gesture-tap-button
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: text.atom_voice_startup_greeting
+        name: Приветствие при старте
+    - type: markdown
+      grid_options:
+        columns: full
+      content: 🎤 **Push-to-talk:** тройной клик по кнопке Atom запускает голосовой запрос.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Диагностика
+      icon: mdi:chart-line
+    - type: gauge
+      entity: sensor.atom_voice_wifi_signal
+      name: WiFi
+      unit: dBm
+      min: -100
+      max: -20
+      needle: true
+      segments:
+      - from: -100
+        color: '#db4437'
+      - from: -80
+        color: '#ffa600'
+      - from: -67
+        color: '#43a047'
+    - type: tile
+      entity: sensor.atom_voice_uptime
+      name: Аптайм
+      icon: mdi:timer-outline
+    - type: tile
+      entity: sensor.atom_voice_mic_rms
+      name: Mic RMS
+      icon: mdi:waveform
+      features:
+      - type: trend-graph
+    - type: tile
+      entity: sensor.atom_voice_mic_peak
+      name: Mic Peak
+      icon: mdi:pulse
+      features:
+      - type: trend-graph
+    - type: tile
+      entity: button.atom_voice_restart
+      name: Перезагрузка
+      icon: mdi:restart
+      tap_action:
+        action: perform-action
+        perform_action: button.press
+        target:
+          entity_id: button.atom_voice_restart
+    - type: tile
+      entity: sensor.atom_voice_wifi_signal
+      name: WiFi (dBm)
+      icon: mdi:wifi
+      color: green
+    - type: tile
+      entity: sensor.atom_voice_uptime
+      name: Аптайм (сек)
+      icon: mdi:timer-outline
+    - type: markdown
+      content: "{% set av = states('sensor.atom_voice_wifi_signal') %}{% set online = av not in ['unavailable','unknown','none','None'] %}{% set up = states('sensor.atom_voice_uptime')|float(0) %}{% set dd = (up//86400)|int %}{% set hh = ((up%86400)//3600)|int %}{% set mm = ((up%3600)//60)|int %}\n## {{ '\U0001F7E2 Online' if online else '\U0001F534 Offline' }}\n**Аптайм:** {{ dd }}д {{ hh }}ч {{ mm }}м  \n**Последний контакт:** {{ relative_time(states.sensor.atom_voice_wifi_signal.last_updated) }} назад  \n**WiFi:** {{ av }} dBm · **Assist:** {{ states('assist_satellite.atom_voice_assist_satellite') }}"
+  - type: grid
+    cards:
+    - type: heading
+      heading: Быстрые действия
+      icon: mdi:gesture-tap-button
+    - type: grid
+      columns: 2
+      square: false
+      cards:
+      - type: button
+        name: Следующий эффект
+        icon: mdi:skip-next
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: script.atom_voice_next_effect
+      - type: button
+        entity: media_player.nickoscope32
+        name: NickoScope32 ▶/⏸
+        icon: mdi:play-pause
+        show_state: true
+        tap_action:
+          action: perform-action
+          perform_action: media_player.media_play_pause
+          target:
+            entity_id: media_player.nickoscope32
+      - type: button
+        name: Ярче
+        icon: mdi:brightness-7
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            brightness_step_pct: 15
+      - type: button
+        name: Темнее
+        icon: mdi:brightness-3
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: light.turn_on
+          target:
+            entity_id: light.atom_voice_strip
+          data:
+            brightness_step_pct: -15
+    - type: button
+      entity: assist_satellite.atom_voice_assist_satellite
+      name: Активировать голос
+      icon: mdi:microphone-message
+      show_state: true
+      tap_action:
+        action: perform-action
+        perform_action: assist_satellite.start_conversation
+        target:
+          entity_id: assist_satellite.atom_voice_assist_satellite
+  - type: grid
+    cards:
+    - type: heading
+      icon: mdi:music
+      heading: 🎵 Медиа
+      heading_style: title
+    - type: heading
+      heading: Выбор плеера и управление
+      heading_style: subtitle
+    - type: tile
+      entity: input_select.atom_dashboard_player
+      name: Плеер
+      icon: mdi:speaker-multiple
+      features_position: bottom
+      features:
+      - type: select-options
+    - type: tile
+      entity: input_number.atom_dashboard_volume
+      name: Громкость
+      icon: mdi:volume-high
+      features_position: bottom
+      features:
+      - type: numeric-input
+        style: slider
+    - type: grid
+      columns: 3
+      square: false
+      grid_options:
+        columns: full
+      cards:
+      - type: button
+        name: Предыдущий
+        icon: mdi:skip-previous
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: script.atom_player_previous
+      - type: button
+        name: ▶ / ⏸
+        icon: mdi:play-pause
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: script.atom_player_play_pause
+      - type: button
+        name: Следующий
+        icon: mdi:skip-next
+        show_state: false
+        tap_action:
+          action: perform-action
+          perform_action: script.atom_player_next
+    - type: media-control
+      entity: media_player.nickoscope32

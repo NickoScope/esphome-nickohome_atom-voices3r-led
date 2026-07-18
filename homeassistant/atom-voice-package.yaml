@@ -1,0 +1,170 @@
+# ==========================================================================
+#  Atom Voice — HA companion package (helpers + scripts + automations)
+#  Device: M5Stack Atom VoiceS3R  ·  ESP32-S3  ·  esphome-atom-voices3r-led
+# --------------------------------------------------------------------------
+#  WHAT: the dashboard-companion entities created for the Atom Voice
+#        media control block:
+#          input_select.atom_dashboard_player   — target player picker
+#          input_number.atom_dashboard_volume   — volume slider (0..100 %)
+#          script.atom_voice_next_effect        — cycle LED-strip effect
+#          script.atom_player_next/previous/play_pause/volume_set
+#          automation.atom_dashboard_volume_apply — slider -> player volume
+#          automation.atom_dashboard_volume_sync  — player change -> slider
+#  HOW TO USE (drop-in package):
+#    1. In configuration.yaml ensure:
+#         homeassistant:
+#           packages: !include_dir_named packages
+#    2. Copy this file to  <config>/packages/atom-voice-package.yaml
+#    3. Developer Tools -> YAML -> Check config, then Restart HA
+#       (or reload Scripts / Automations / Helpers individually).
+#  NOTE: player_map inside the scripts references media_player entity_ids
+#        that must exist on your HA; adjust to your fleet as needed.
+#  Exported from HA via REST config API. No secrets/tokens.
+# ==========================================================================
+
+input_select:
+  atom_dashboard_player:
+    name: Atom Dashboard Player
+    icon: mdi:speaker-multiple
+    options:
+    - NickoScope32
+    - Atom Speaker
+    - URRI Server
+    - SPA
+    - Главная спальня
+    - Яндекс Станция 2
+    - Станция Мини 3 Про
+input_number:
+  atom_dashboard_volume:
+    name: Atom Dashboard Volume
+    min: 0
+    max: 100
+    step: 1
+    mode: slider
+    unit_of_measurement: '%'
+    icon: mdi:volume-high
+script:
+  atom_voice_next_effect:
+    alias: Atom Voice · Следующий эффект
+    icon: mdi:skip-next
+    mode: restart
+    sequence:
+    - variables:
+        el: '{{ state_attr(''light.atom_voice_strip'',''effect_list'') }}'
+        cur: '{{ state_attr(''light.atom_voice_strip'',''effect'') }}'
+        idx: '{{ el.index(cur) if cur in el else -1 }}'
+        nxt: '{{ el[(idx + 1) % (el | length)] }}'
+    - action: light.turn_on
+      target:
+        entity_id: light.atom_voice_strip
+      data:
+        effect: '{{ nxt }}'
+  atom_player_next:
+    alias: Atom Dashboard · Следующий трек
+    icon: mdi:skip-next
+    mode: single
+    sequence:
+    - variables:
+        player_map:
+          NickoScope32: media_player.nickoscope32
+          Atom Speaker: media_player.atom_voice_atom_speaker
+          URRI Server: media_player.urri_server
+          SPA: media_player.spa
+          Главная спальня: media_player.glavnaia_spalnia_2
+          Яндекс Станция 2: media_player.yandex_station_u00c533009fayb
+          Станция Мини 3 Про: media_player.yandex_station_m0p309000jkp0w
+        target_player: '{{ player_map.get(states(''input_select.atom_dashboard_player''), ''media_player.nickoscope32'') }}'
+    - action: media_player.media_next_track
+      target:
+        entity_id: '{{ target_player }}'
+  atom_player_previous:
+    alias: Atom Dashboard · Предыдущий трек
+    icon: mdi:skip-previous
+    mode: single
+    sequence:
+    - variables:
+        player_map:
+          NickoScope32: media_player.nickoscope32
+          Atom Speaker: media_player.atom_voice_atom_speaker
+          URRI Server: media_player.urri_server
+          SPA: media_player.spa
+          Главная спальня: media_player.glavnaia_spalnia_2
+          Яндекс Станция 2: media_player.yandex_station_u00c533009fayb
+          Станция Мини 3 Про: media_player.yandex_station_m0p309000jkp0w
+        target_player: '{{ player_map.get(states(''input_select.atom_dashboard_player''), ''media_player.nickoscope32'') }}'
+    - action: media_player.media_previous_track
+      target:
+        entity_id: '{{ target_player }}'
+  atom_player_play_pause:
+    alias: Atom Dashboard · Play/Pause
+    icon: mdi:play-pause
+    mode: single
+    sequence:
+    - variables:
+        player_map:
+          NickoScope32: media_player.nickoscope32
+          Atom Speaker: media_player.atom_voice_atom_speaker
+          URRI Server: media_player.urri_server
+          SPA: media_player.spa
+          Главная спальня: media_player.glavnaia_spalnia_2
+          Яндекс Станция 2: media_player.yandex_station_u00c533009fayb
+          Станция Мини 3 Про: media_player.yandex_station_m0p309000jkp0w
+        target_player: '{{ player_map.get(states(''input_select.atom_dashboard_player''), ''media_player.nickoscope32'') }}'
+    - action: media_player.media_play_pause
+      target:
+        entity_id: '{{ target_player }}'
+  atom_player_volume_set:
+    alias: Atom Dashboard · Установить громкость
+    icon: mdi:volume-high
+    mode: restart
+    sequence:
+    - variables:
+        player_map:
+          NickoScope32: media_player.nickoscope32
+          Atom Speaker: media_player.atom_voice_atom_speaker
+          URRI Server: media_player.urri_server
+          SPA: media_player.spa
+          Главная спальня: media_player.glavnaia_spalnia_2
+          Яндекс Станция 2: media_player.yandex_station_u00c533009fayb
+          Станция Мини 3 Про: media_player.yandex_station_m0p309000jkp0w
+        target_player: '{{ player_map.get(states(''input_select.atom_dashboard_player''), ''media_player.nickoscope32'') }}'
+    - action: media_player.volume_set
+      target:
+        entity_id: '{{ target_player }}'
+      data:
+        volume_level: '{{ (states(''input_number.atom_dashboard_volume'') | float(0)) / 100 }}'
+automation:
+- id: atom_dashboard_volume_apply
+  alias: Atom Dashboard · применить громкость к выбранному плееру
+  description: Слайдер input_number.atom_dashboard_volume -> volume_set выбранного плеера
+  triggers:
+  - trigger: state
+    entity_id: input_number.atom_dashboard_volume
+  conditions: []
+  actions:
+  - action: script.atom_player_volume_set
+  mode: restart
+- id: atom_dashboard_volume_sync
+  alias: Atom Dashboard · синхронизировать слайдер при смене плеера
+  description: При смене плеера подтянуть его текущую громкость в слайдер
+  triggers:
+  - trigger: state
+    entity_id: input_select.atom_dashboard_player
+  conditions: []
+  actions:
+  - variables:
+      player_map:
+        NickoScope32: media_player.nickoscope32
+        Atom Speaker: media_player.atom_voice_atom_speaker
+        URRI Server: media_player.urri_server
+        SPA: media_player.spa
+        Главная спальня: media_player.glavnaia_spalnia_2
+        Яндекс Станция 2: media_player.yandex_station_u00c533009fayb
+        Станция Мини 3 Про: media_player.yandex_station_m0p309000jkp0w
+      target_player: '{{ player_map.get(states(''input_select.atom_dashboard_player''), ''media_player.nickoscope32'') }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.atom_dashboard_volume
+    data:
+      value: '{{ (state_attr(target_player,''volume_level'') | float(0) * 100) | round(0) }}'
+  mode: restart

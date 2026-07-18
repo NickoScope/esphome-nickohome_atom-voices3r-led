@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com); this project uses
 [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+- **Home Assistant companion config — Atom Voice dashboard + media/action controls package.**
+  Companion‑config only; the firmware binary is unchanged (still **v1.12.0**, no re‑flash needed).
+  - **`homeassistant/atom-voice-dashboard.yaml`** — full Lovelace YAML of the Atom Voice
+    dashboard (7 sections: свет/эффекты, часы, звук, голос/медиа, диагностика, быстрые действия,
+    медиа). Import via *Settings → Dashboards → Raw configuration editor*.
+  - **`homeassistant/atom-voice-package.yaml`** — drop‑in HA package: `input_select` player
+    picker + volume `input_number`, five scripts (LED effect cycler + player next / previous /
+    play‑pause / volume‑set) and two automations (slider → player volume, and player → slider
+    sync). Adjust the `player_map` / `input_select` entity_ids to your own media fleet.
+
 ## [1.12.0] — 2026-07-18
 
 ### Added

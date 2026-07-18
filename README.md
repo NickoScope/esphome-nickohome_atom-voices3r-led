@@ -260,6 +260,17 @@ speaks the `Startup Greeting` text via TTS whenever the device boots. The greeti
 editable in the web interface / HA and restored across reboots; the **Startup Effect** select
 is applied entirely in firmware (`on_boot`) and needs no automation.
 
+**Atom Voice dashboard (optional):** a ready‑made Lovelace dashboard bundling every control
+above into seven sections (light/effects, clock, sound, voice/media, diagnostics, quick
+actions, media). Import the raw YAML from
+[homeassistant/atom-voice-dashboard.yaml](homeassistant/atom-voice-dashboard.yaml) (Settings →
+Dashboards → new dashboard → *Raw configuration editor* → paste). Its media section and the
+"next effect" / player transport buttons depend on the companion package
+[homeassistant/atom-voice-package.yaml](homeassistant/atom-voice-package.yaml) — a drop‑in HA
+package (`input_select` player picker, volume `input_number`, effect‑cycler + player‑transport
+scripts, and two volume‑sync automations). Adjust the `player_map`/`input_select` entity_ids in
+the package to match your own media players.
+
 ---
 
 ## 🧠 How It Works (engineering notes)
