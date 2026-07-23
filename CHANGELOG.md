@@ -6,9 +6,36 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com); this proj
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-07-23
+
 ### Added
+- **Installable web UI — offline‑first + iOS “Add to Home Screen” standalone + icon**
+  (closes [#1](https://github.com/NickoScope/esphome-nickohome_atom-voices3r-led/issues/1)).
+  The on‑device web interface now behaves like an installed app on iPhone: Share → *Add to Home
+  Screen* gives it a real home‑screen icon and launches it **full‑screen standalone** (no Safari
+  chrome), and it loads with **no internet** at all.
+  - **`local: true`** (already on) embeds the frontend CSS/JS in PROGMEM, so the UI no longer
+    depends on `oi.esphome.io` — it works on a WAN‑less router or with the phone offline on the AP.
+  - **New `js_include: pwa.js`** — ESPHome serves this ES module at `/0.js` and it runs in the page
+    context on every load, injecting into `document.head` the iOS PWA hints that `web_server`
+    cannot emit from config: `apple-mobile-web-app-capable`, `mobile-web-app-capable`,
+    `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title` (“Atom Voice”),
+    `theme-color`, plus a 180×180 `apple-touch-icon` as an inline PNG data‑URI. The injection is
+    idempotent (each tag is added only if absent).
+  - **Result on iOS: works fully** — standalone launch and the home‑screen icon were both
+    confirmed on‑device (2026‑07‑23). This settles the open experiment in issue #1: iOS *does*
+    honour runtime‑injected apple meta tags at Add‑to‑Home‑Screen time.
+
+### Notes
+- ESPHome `web_server` has **no** `manifest.json` / `apple-touch-icon` handler and its frontend is
+  a compiled Lit app, so arbitrary `<head>` tags can't be added via config — runtime injection via
+  `js_include` is the only route. The icon must be an inline `data:` URI because `web_server`
+  cannot serve a separate image file.
+- Firmware change: re‑flash required. Clean build at RAM 20.5% / Flash 33.0%.
+
+### Added (Home Assistant companion)
 - **Home Assistant companion config — Atom Voice dashboard + media/action controls package.**
-  Companion‑config only; the firmware binary is unchanged (still **v1.12.0**, no re‑flash needed).
+  Companion‑config only; no firmware dependency (usable on v1.12.0 as well).
   - **`homeassistant/atom-voice-dashboard.yaml`** — full Lovelace YAML of the Atom Voice
     dashboard (7 sections: свет/эффекты, часы, звук, голос/медиа, диагностика, быстрые действия,
     медиа). Import via *Settings → Dashboards → Raw configuration editor*.

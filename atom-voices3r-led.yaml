@@ -75,6 +75,7 @@ web_server:
   port: 80
   version: 3
   local: true
+  js_include: pwa.js   # runtime iOS PWA / "Add to Home Screen" hints — see pwa.js + issue #1
   ota: false        # firmware updates stay on the password-protected esphome OTA, not the web page
   sorting_groups:
     - id: grp_effects

@@ -81,6 +81,12 @@ Shared freely so the next person doesn't lose an evening to it.
   settings below — no Home Assistant required. Controls are organized into named groups —
   🎨 Effects & Light / 🕐 Clock / 🔊 Sound / 📢 Announcements / 🚀 Startup / ⚙️ System — instead
   of one flat list.
+- **Installable web UI (offline‑first + iOS “Add to Home Screen”)** — the web interface works
+  like an installed app: `local: true` embeds the frontend in the firmware so it loads **with no
+  internet**, and `js_include: pwa.js` adds the iOS PWA hints at runtime. On iPhone, *Share → Add
+  to Home Screen* gives it a **real home‑screen icon** and launches it **full‑screen standalone**
+  (no Safari chrome) — confirmed working on‑device. See
+  [How it works](#installable-web-ui-pwa-style).
 - **Startup Effect** — a `Startup Effect` select picks which effect the strip shows on boot
   (Clock / Fireplace / Matrix Rain / Terminal / Fireworks Burst / Chaos / Spectrum / TV Simulator /
   Bell Glow / None), applied in firmware `on_boot` and restored across reboots.
@@ -173,6 +179,12 @@ Generate the API key:
 ```bash
 python3 -c "import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())"
 ```
+
+> **Keep `pwa.js` next to the YAML.** `atom-voices3r-led.yaml` references it via
+> `js_include: pwa.js`, and ESPHome resolves that path **relative to the YAML**, so both files
+> must live in the same directory or the build fails. It's what makes the web UI installable on
+> iOS (see [Installable web UI](#installable-web-ui-pwa-style)); if you don't want it, delete the
+> `js_include:` line and the file.
 
 ### 2. First flash (USB)
 The factory firmware holds the native USB, so put the board in **download mode**:
@@ -285,6 +297,31 @@ Three non‑obvious things make this device work; full write‑up in
 3. **NaN‑safe audio math.** A stopped mic can emit `NaN`; `if (nrm < 0)` does **not**
    catch NaN (all NaN comparisons are false), so the level would latch at NaN and crash an
    effect. The clamp uses `if (!(nrm > 0))` plus per‑effect guards.
+
+<a id="installable-web-ui-pwa-style"></a>
+
+### Installable web UI (PWA‑style) — how the iOS icon works
+
+ESPHome's `web_server` frontend is a **compiled Lit app**: it has no `manifest.json` handler and
+no `apple-touch-icon` handler, and arbitrary `<head>` tags cannot be added from YAML. So the usual
+PWA recipe (drop meta tags in the HTML head) is simply not available here.
+
+The route that does work is `js_include`. ESPHome embeds [`pwa.js`](pwa.js) into the firmware and
+serves it at `/0.js` as a `<script type="module">`, which executes in the page context on every
+load — enough to append the iOS hints to `document.head` at runtime:
+
+- `apple-mobile-web-app-capable` + `mobile-web-app-capable` → full‑screen **standalone** launch
+- `apple-mobile-web-app-status-bar-style`, `theme-color` → dark status bar that matches the UI
+- `apple-mobile-web-app-title` → the home‑screen label (**Atom Voice**)
+- `apple-touch-icon` → a 180×180 PNG supplied as an **inline `data:` URI**, because `web_server`
+  can't serve a separate image file
+
+Whether iOS honours *runtime‑injected* apple meta tags at Add‑to‑Home‑Screen time was the open
+question — **it does**: standalone launch and the icon were both verified on‑device. Pair this with
+`local: true` (frontend in PROGMEM) and the UI is fully offline: no `oi.esphome.io`, no WAN.
+
+> Each tag is injected only if not already present, so the script is safe to re‑run on every load.
+> To rebrand, edit the title/`theme-color` and swap the base64 icon in [`pwa.js`](pwa.js).
 
 ---
 
